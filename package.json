@@ -1,0 +1,19 @@
+{
+  "name": "dynapp-atom",
+  "main": "./lib/dynapp-atom",
+  "version": "0.0.0",
+  "description": "Paket för att enklare kunna redigera dynapp-projekt i atom",
+  "keywords": [],
+  "activationCommands": {
+    "atom-workspace": "dynapp-atom:activate"
+  },
+  "repository": "https://github.com/atom/dynapp-atom",
+  "license": "MIT",
+  "engines": {
+    "atom": ">=1.0.0 <2.0.0"
+  },
+  "dependencies": {
+    "path": "^0.12.7",
+    "request": "^2.81.0"
+  }
+}

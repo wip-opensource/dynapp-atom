@@ -1,0 +1,7 @@
+{
+  "atom-workspace": {
+    "ctrl-alt-u": "dynapp-atom:uploadItems",
+    "ctrl-alt-d": "dynapp-atom:downloadProject",
+    "ctrl-alt-c": "dynapp-atom:createConfig"
+  }
+}

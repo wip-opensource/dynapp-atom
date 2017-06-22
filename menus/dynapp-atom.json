@@ -1,0 +1,38 @@
+{
+  "context-menu": {
+    "atom-text-editor": [
+      {
+        "label":"Activate dynapp-atom",
+        "command":"dynapp-atom:activate"
+      }
+    ]
+  },
+  "menu": [
+    {
+      "label": "Packages",
+      "submenu": [
+        {
+          "label": "dynapp-atom",
+          "submenu": [
+            {
+              "label": "Download project",
+              "command": "dynapp-atom:downloadProject"
+            },
+            {
+              "label":"Create configfile",
+              "command":"dynapp-atom:createConfig"
+            },
+            {
+              "label":"Upload project",
+              "command":"dynapp-atom:uploadItems"
+            },
+            {
+              "label":"Activate dynapp-atom",
+              "command":"dynapp-atom:activate"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
