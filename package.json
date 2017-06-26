@@ -7,7 +7,7 @@
   "activationCommands": {
     "atom-workspace": "dynapp-atom:activate"
   },
-  "repository": "https://github.com/atom/dynapp-atom",
+  "repository": "https://github.com/wip-opensource/dynapp-atom",
   "license": "MIT",
   "engines": {
     "atom": ">=1.0.0 <2.0.0"
