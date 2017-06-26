@@ -2,7 +2,7 @@
   "name": "dynapp-atom",
   "main": "./lib/dynapp-atom",
   "version": "0.0.0",
-  "description": "Paket för att enklare kunna redigera dynapp-projekt i atom",
+  "description": "Paket för att enklare kunna redigera dynapp-projekt i atom.",
   "keywords": [],
   "activationCommands": {
     "atom-workspace": "dynapp-atom:createConfig",
