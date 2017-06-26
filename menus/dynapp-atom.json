@@ -29,6 +29,10 @@
             {
               "label":"Activate dynapp-atom",
               "command":"dynapp-atom:activate"
+            },
+            {
+              "label":"New dynapp-json",
+              "command":"dynapp-atom:new-json"
             }
           ]
         }
