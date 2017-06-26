@@ -1,10 +1,9 @@
 {
   "name": "dynapp-atom",
   "main": "./lib/dynapp-atom",
-  "version": "0.0.0",
-  "description": "Paket för att enklare kunna redigera dynapp-projekt i atom",
+  "version": "0.2.0",
+  "description": "Paket för att enklare kunna redigera dynapp-projekt i atom.",
   "keywords": [],
-
   "repository": "https://github.com/wip-opensource/dynapp-atom",
   "license": "MIT",
   "engines": {
