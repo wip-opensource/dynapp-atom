@@ -3,15 +3,16 @@ const fs = require('fs');
 const {File} = require('atom')
 const {Project} = require('atom')
 const path = require('path')
+let filelistHandeler = require('./filelistHandeler.js')
 
 
 var addOnDeleteListener = function(){
   try{
     var cred = getCred()
-    var filepath = atom.project.getPaths()[0]
+    var filepath = atom.project.getPaths()[0] + '/data-items/'
     fs.readdir(filepath, (err, files) => {
       files.forEach(file => {
-        var fileobj = new File(filepath +'/data-items/'+ file)
+        var fileobj = new File(filepath + file)
         fileobj.onDidDelete(function(cb){
           var urlString = cred.baseUrl + "dynapp-server/rest/groups/" + cred.group + "/apps/" + cred.app + "/data-items/" + file
           const settings = {
@@ -40,7 +41,6 @@ var addOnDeleteListener = function(){
                 },
                 text: "TA BORT"
               }
-
             ]}
           atom.notifications.addWarning("Vill du ta bort denna fil även på serven?", settings)
         });
@@ -74,7 +74,10 @@ var postFile = function(file){
       headers['Content-Type'] = 'text/html'
     } else if (file.indexOf('.js') != -1) {
       headers['Content-Type'] = 'text/javascript'
-    } else {
+    } else if(file.indexOf('.json') != -1){
+
+    } else{
+      atom.notifications.addError("Kan inte spara filen på serven, fel filformat", undefined)
       return;
     }
 
@@ -97,6 +100,8 @@ var postFile = function(file){
       }
       console.log(response)
       resolve()
+      filelistHandeler.saveFileListToLocal()
+      addOnDeleteListener()
     }
     request(options, callback);
   });
@@ -190,18 +195,18 @@ var downloadFile = function(file) {
       }
       console.log(file)
       resolve()
-      if (file.indexOf('.json') == -1) {
+      //if (file.indexOf('.json') == -1) {
         fs.writeFile(filepath + '/data-items/' + file, body, 'binary', function(err) {});
-      } else {
-        try{
-          var obj = JSON.parse(body)
-          fs.writeFile(filepath + '/data-items/' + file, JSON.stringify(obj, null, 4));
-        }
-        catch(e){
-          fs.writeFile(filepath + '/data-items/' + file, body, 'binary', function(err) {});
-        }
+      //} else {
+        //try{
+          //var obj = JSON.parse(body)
+          //fs.writeFile(filepath + '/data-items/' + file, JSON.stringify(obj, null, 4));
+        //}
+        //catch(e){
+          //fs.writeFile(filepath + '/data-items/' + file, body, 'binary', function(err) {});
+        //}
 
-      }
+      //}
     })
   })
 }

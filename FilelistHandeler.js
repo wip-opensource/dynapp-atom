@@ -4,6 +4,23 @@ const {File} = require('atom')
 const {Project} = require('atom')
 const path = require('path')
 
+// download only json, css, html and js
+var validateFilesToDownload = function(files) {
+  for (file in files.fileList) {
+    if (file.indexOf('.json') != -1) {
+
+    } else if (file.indexOf('.css') != -1) {
+
+    } else if (file.indexOf('.html') != -1) {
+
+    } else if (file.indexOf('.js') != -1) {
+
+    } else {
+      delete files.fileList[file];
+    }
+  }
+  return files;
+}
 
 var saveFileListToLocal = function(){
   getFileList().then(function(result) {
@@ -12,6 +29,7 @@ var saveFileListToLocal = function(){
     fs.writeFile(filepath + '/.files.json', JSON.stringify(files, null, 4));
   });
 }
+module.exports.saveFileListToLocal = saveFileListToLocal;
 
 // get a list of all the files in the server
 var getFileList = function() {

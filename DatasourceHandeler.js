@@ -3,6 +3,48 @@ const fs = require('fs');
 const {File} = require('atom')
 const {Project} = require('atom')
 const path = require('path')
+let filelistHandeler = require('./filelistHandeler.js')
+
+// Make a post request to the server for new files
+var postFile = function(file){
+  return new Promise((resolve, reject) => {
+    var cred = getCred()
+
+    var filepath = atom.project.getPaths()[0] + '/data-source-items/' + file + '.json';
+    var urlString = cred.baseUrl + "dynapp-server/rest/groups/" + cred.group + "/apps/" + cred.app + "/source/" + file
+    var  headers = {
+        'Content-Type': 'application/json'
+    };
+
+    var content = fs.readFileSync(filepath, 'utf8')
+
+    console.log(content)
+    var options = {
+      url: urlString,
+      method: 'POST',
+      headers: headers,
+      body: content,
+      auth: {
+        'user': cred.username,
+        'pass': cred.password
+      }
+    };
+
+    function callback(error, response, body) {
+      if(response.statusCode != 201){
+        atom.notifications.addWarning("Kunde inte spara data. Kolla dina uppgifter i dynappconfig.json", null)
+        reject()
+      }
+      console.log(response)
+      filelistHandeler.saveFileListToLocal()
+      addOnDeleteListener()
+      resolve()
+    }
+    request(options, callback);
+  });
+}
+
+module.exports.postFile = postFile;
 
 var addOnDeleteListener = function(){
   try{

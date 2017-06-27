@@ -1,38 +1,37 @@
 {
   "context-menu": {
-    "atom-text-editor": [
-      {
-        "label":"Activate dynapp-atom",
-        "command":"dynapp-atom:activate"
-      }
-    ]
+    "atom-text-editor": []
   },
   "menu": [
     {
       "label": "Packages",
       "submenu": [
         {
-          "label": "dynapp-atom",
+          "label": "Dynapp-atom",
           "submenu": [
-            {
-              "label": "Download project",
-              "command": "dynapp-atom:downloadProject"
-            },
             {
               "label":"Create configfile",
               "command":"dynapp-atom:createConfig"
+            },
+            {
+              "label": "Download project",
+              "command": "dynapp-atom:downloadProject"
             },
             {
               "label":"Upload project",
               "command":"dynapp-atom:uploadItems"
             },
             {
-              "label":"Activate dynapp-atom",
-              "command":"dynapp-atom:activate"
+              "label":"New data item",
+              "command":"dynapp-atom:newItem"
             },
             {
-              "label":"New dynapp-json",
-              "command":"dynapp-atom:new-json"
+              "label":"New data object",
+              "command":"dynapp-atom:newObject"
+            },
+            {
+              "label":"New data source",
+              "command":"dynapp-atom:newSource"
             }
           ]
         }
