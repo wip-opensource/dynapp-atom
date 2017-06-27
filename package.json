@@ -1,7 +1,7 @@
 {
   "name": "dynapp-atom",
   "main": "./lib/dynapp-atom",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Paket för att enklare kunna redigera dynapp-projekt i atom",
   "keywords": [],
   "repository": "https://github.com/wip-opensource/dynapp-atom",
