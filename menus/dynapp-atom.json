@@ -18,7 +18,7 @@
               "command": "dynapp-atom:downloadProject"
             },
             {
-              "label":"Upload project",
+              "label":"Publish",
               "command":"dynapp-atom:uploadItems"
             },
             {

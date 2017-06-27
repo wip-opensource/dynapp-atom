@@ -18,6 +18,7 @@ var postFile = function(file){
     console.log(file)
 
     var content = fs.readFileSync(filepath, 'utf8')
+    console.log(content)
     content = JSON.parse(content)
     content.name = file
     content = JSON.stringify(content)
