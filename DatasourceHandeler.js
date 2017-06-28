@@ -18,7 +18,6 @@ var postFile = function(file){
 
     var content = fs.readFileSync(filepath, 'utf8')
 
-    console.log(content)
     var options = {
       url: urlString,
       method: 'POST',
@@ -35,7 +34,6 @@ var postFile = function(file){
         atom.notifications.addWarning("Kunde inte spara data. Kolla dina uppgifter i dynappconfig.json", null)
         reject()
       }
-      console.log(response)
       filelistHandeler.saveFileListToLocal()
       addOnDeleteListener()
       resolve()
@@ -105,10 +103,8 @@ module.exports.addOnDeleteListener = addOnDeleteListener;
 var uploadSource = function(source, file){
   return new Promise(function(resolve, reject){
     var cred = getCred()
-    console.log(file)
 
     if(!file['dirty']){
-      console.log("bla")
       resolve()
       return;
     }
@@ -125,7 +121,7 @@ var uploadSource = function(source, file){
     content = JSON.parse(content);
     var b64String = new Buffer(fs.readFileSync(filepathPython, 'utf8')).toString('base64');
     content.stylesheet = b64String
-    console.log(content)
+
     content = JSON.stringify(content)
     var options = {
       url: urlString,
@@ -139,11 +135,16 @@ var uploadSource = function(source, file){
     };
 
     function callback(error, response, body) {
-      if(response.statusCode != 204){
+      if(response.statusCode > 204){
         atom.notifications.addWarning("Kunde inte spara alla filer. Kolla dina uppgifter i dynappconfig.json", null)
       }
-
-      resolve()
+      var resolveObj = {
+        name: source,
+        isUploaded: true,
+        etag:response.headers.etag,
+        list:"dataSources"
+      }
+      resolve(resolveObj)
     }
     request(options, callback);
   })
@@ -159,7 +160,7 @@ var getCred = function(){
 }
 
 
-var downloadSource = function(name){
+var downloadSource = function(name, etag){
   return new Promise(function(resolve,reject){
     var cred = getCred()
 
@@ -173,8 +174,17 @@ var downloadSource = function(name){
       auth: {
         user: cred.username,
         password: cred.password
-      }
+      },
     }
+
+    if(etag != undefined){
+      etag = etag.replace("\"", '')
+      etag = etag.replace("\"", '')
+      options['headers']["If-None-Match"] = "\"" + etag +"\""
+
+    }
+
+
 
     request(options, function(err, res, body) {
       if (err) {
@@ -182,13 +192,25 @@ var downloadSource = function(name){
         reject()
         return
       }
+      if(res.statusCode == 200){
+        var resolveObj = {
+          fileName: name,
+          etag: res.headers.etag,
+          list:"dataSources"
+        }
 
-      var obj = JSON.parse(body)
-      var b64String = obj.stylesheet
-      var decodedString = new Buffer(b64String, 'base64').toString('utf8')
-      fs.writeFile(filepath + '/data-source-items/' + name + '.py', decodedString, 'binary', function(err) {});
-      fs.writeFile(filepath + '/data-source-items/' + name + '.json', JSON.stringify(obj, null, 4));
-      resolve()
+
+        var obj = JSON.parse(body)
+        var b64String = obj.stylesheet
+        var decodedString = new Buffer(b64String, 'base64').toString('utf8')
+        fs.writeFile(filepath + '/data-source-items/' + name + '.py', decodedString, 'binary', function(err) {});
+        fs.writeFile(filepath + '/data-source-items/' + name + '.json', JSON.stringify(obj, null, 4));
+
+        resolve(resolveObj)
+      }else{
+        resolve()
+      }
+
     });
   });
 }

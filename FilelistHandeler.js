@@ -77,7 +77,6 @@ var getFileList = function() {
           console.dir(err)
           return
         }
-
         if(res.statusCode != 200){
           atom.notifications.addWarning("Kunde inte hämta data. Kolla dina uppgifter i dynappconfig.json", null)
           reject()

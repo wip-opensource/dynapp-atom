@@ -98,7 +98,6 @@ var postFile = function(file){
         atom.notifications.addWarning("Kunde inte spara data. Kolla dina uppgifter i dynappconfig.json", null)
         reject()
       }
-      console.log(response)
       resolve()
       filelistHandeler.saveFileListToLocal()
       addOnDeleteListener()
@@ -127,7 +126,7 @@ var uploadFile = function(file, filename) {
           resolve()
           return;
         }
-        console.log('uploading file: ' + file)
+        console.log('uploading file ' + file)
 
         var filepath = atom.project.getPaths()[0] + '/data-items/' + filename;
         var urlString = cred.baseUrl + "dynapp-server/rest/groups/" + cred.group + "/apps/" + cred.app + "/data-items/" + filename
@@ -145,6 +144,7 @@ var uploadFile = function(file, filename) {
         } else if (filename.indexOf('.js') != -1) {
           headers['Content-Type'] = 'text/javascript'
         } else {
+          resolve()
           return;
         }
 
@@ -159,12 +159,17 @@ var uploadFile = function(file, filename) {
             'pass': cred.password
           }
         };
-
-        function callback(error, response, body) {
-          if(response.statusCode != 204){
+        var name = filename
+        var callback =  function(error, response, body) {
+          if(response.statusCode > 204){
             atom.notifications.addWarning("Kunde inte spara alla filer. Kolla dina uppgifter i dynappconfig.json", null)
           }
-          resolve()
+          var resolveObj = {
+            name:name,
+            isUploaded: true,
+            list:"fileList"
+          }
+          resolve(resolveObj)
         }
         request(options, callback);
       });
@@ -173,7 +178,7 @@ var uploadFile = function(file, filename) {
 module.exports.uploadFile = uploadFile
 
 // download a specific file
-var downloadFile = function(file) {
+var downloadFile = function(file, etag) {
   return new Promise(function(resolve,reject){
     var cred = getCred()
 
@@ -184,7 +189,16 @@ var downloadFile = function(file) {
       auth: {
         user: cred.username,
         password: cred.password
-      }
+      },
+      headers:{}
+    }
+
+
+
+    if(etag != undefined){
+      etag = etag.replace("\"", '')
+      etag = etag.replace("\"", '')
+      options['headers']["If-None-Match"] = "\"" + etag +"\""
     }
 
     request(options, function(err, res, body) {
@@ -193,20 +207,18 @@ var downloadFile = function(file) {
         reject()
         return
       }
-      console.log(file)
-      resolve()
-      //if (file.indexOf('.json') == -1) {
+      if(res.statusCode == 200){
+        var resolveObj = {
+          fileName: file,
+          etag: res.headers.etag,
+          list:"fileList"
+        }
         fs.writeFile(filepath + '/data-items/' + file, body, 'binary', function(err) {});
-      //} else {
-        //try{
-          //var obj = JSON.parse(body)
-          //fs.writeFile(filepath + '/data-items/' + file, JSON.stringify(obj, null, 4));
-        //}
-        //catch(e){
-          //fs.writeFile(filepath + '/data-items/' + file, body, 'binary', function(err) {});
-        //}
+        resolve(resolveObj)
+      }else{
+        resolve()
+      }
 
-      //}
     })
   })
 }

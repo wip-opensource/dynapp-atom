@@ -15,14 +15,11 @@ var postFile = function(file){
     var  headers = {
         'Content-Type': 'application/json'
     };
-    console.log(file)
 
     var content = fs.readFileSync(filepath, 'utf8')
-    console.log(content)
     content = JSON.parse(content)
     content.name = file
     content = JSON.stringify(content)
-    console.log(content)
     var options = {
       url: urlString,
       method: 'POST',
@@ -39,7 +36,6 @@ var postFile = function(file){
         atom.notifications.addWarning("Kunde inte spara data. Kolla dina uppgifter i dynappconfig.json", null)
         reject()
       }
-      console.log(response)
       filelistHandeler.saveFileListToLocal()
       addOnDeleteListener()
       resolve()
@@ -109,7 +105,6 @@ module.exports.addOnDeleteListener = addOnDeleteListener;
 var uploadObject = function(object, file){
   return new Promise(function(resolve, reject){
     var cred = getCred()
-    console.log(file)
 
     if(!file['dirty']){
       resolve()
@@ -142,11 +137,16 @@ var uploadObject = function(object, file){
     };
 
     function callback(error, response, body) {
-      if(response.statusCode != 204){
+      if(response.statusCode > 204){
         atom.notifications.addWarning("Kunde inte spara alla filer. Kolla dina uppgifter i dynappconfig.json", null)
       }
-
-      resolve()
+      var resolveObj = {
+        name: object,
+        isUploaded: true,
+        etag: response.headers.etag,
+        list:"dataObjects"
+      }
+      resolve(resolveObj)
     }
     request(options, callback);
   })
@@ -162,10 +162,9 @@ var getCred = function(){
 }
 
 
-var downloadObject = function(name){
+var downloadObject = function(name, etag){
   return new Promise(function(resolve,reject){
     var cred = getCred()
-    console.log("Downloading: " + name)
 
     filepath = atom.project.getPaths()[0]
 
@@ -180,20 +179,36 @@ var downloadObject = function(name){
       }
     }
 
+    if(etag != undefined){
+      etag = etag.replace("\"", '')
+      etag = etag.replace("\"", '')
+      options['headers']["If-None-Match"] = "\"" + etag +"\""
+    }
+
+
     request(options, function(err, res, body) {
       if (err) {
         console.dir(err)
         reject()
         return
       }
+      if(res.statusCode == 200){
+        var resolveObj = {
+          fileName: name,
+          etag: res.headers.etag,
+          list:"dataObjects"
+        }
 
-      var obj = JSON.parse(body)
-      //console.log(obj)
-      var b64String = obj.stylesheet
-      var decodedString = new Buffer(b64String, 'base64').toString('utf8')
-      fs.writeFile(filepath + '/data-objects/' + name + '.py', decodedString, 'binary', function(err) {});
-      fs.writeFile(filepath + '/data-objects/' + name + '.json', JSON.stringify(obj, null, 4));
-      resolve()
+        var obj = JSON.parse(body)
+        var b64String = obj.stylesheet
+        var decodedString = new Buffer(b64String, 'base64').toString('utf8')
+        fs.writeFile(filepath + '/data-objects/' + name + '.py', decodedString, 'binary', function(err) {});
+        fs.writeFile(filepath + '/data-objects/' + name + '.json', JSON.stringify(obj, null, 4));
+
+        resolve(resolveObj)
+      }else{
+        resolve()
+      }
     });
   });
 }
