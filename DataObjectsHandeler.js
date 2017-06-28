@@ -3,7 +3,7 @@ const fs = require('fs');
 const {File} = require('atom')
 const {Project} = require('atom')
 const path = require('path')
-let filelistHandeler = require('./filelistHandeler.js')
+let filelistHandeler = require('./FilelistHandeler.js')
 
 // Make a post request to the server for new files
 var postFile = function(file){
