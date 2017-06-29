@@ -136,18 +136,20 @@ var uploadFile = function(file, filename) {
             'X-Category': file['cat'],
 
           };
-          /*
+
         if (filename.indexOf('.css') != -1) {
           headers['Content-Type'] = 'text/css'
         } else if (filename.indexOf('.html') != -1) {
           headers['Content-Type'] = 'text/html'
         } else if (filename.indexOf('.js') != -1) {
           headers['Content-Type'] = 'text/javascript'
+        } else if(filename.indexOf('.properties') != -1){
+          headers['Content-Type'] = 'text/plain'
         } else {
           resolve()
           return;
         }
-        */
+
 
         var content = fs.readFileSync(filepath, 'utf8')
         var options = {
@@ -216,7 +218,7 @@ var downloadFile = function(file, etag) {
           etag: res.headers.etag,
           list:"fileList"
         }
-        fs.writeFile(filepath + '/data-items/' + file, body, 'binary', function(err) {});
+        fs.writeFile(filepath + '/data-items/' + file, body, 'utf8', function(err) {});
         resolve(resolveObj)
       }else{
         resolve()
