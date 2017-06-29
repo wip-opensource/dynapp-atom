@@ -121,12 +121,12 @@ var getCred = function(){
 var uploadFile = function(file, filename) {
   return new Promise((resolve, reject) => {
     var cred = getCred()
+    console.log('uploading file ' + file)
 
         if(!file['dirty']){
           resolve()
           return;
         }
-        console.log('uploading file ' + file)
 
         var filepath = atom.project.getPaths()[0] + '/data-items/' + filename;
         var urlString = cred.baseUrl + "dynapp-server/rest/groups/" + cred.group + "/apps/" + cred.app + "/data-items/" + filename
@@ -136,7 +136,7 @@ var uploadFile = function(file, filename) {
             'X-Category': file['cat'],
 
           };
-
+          /*
         if (filename.indexOf('.css') != -1) {
           headers['Content-Type'] = 'text/css'
         } else if (filename.indexOf('.html') != -1) {
@@ -147,6 +147,7 @@ var uploadFile = function(file, filename) {
           resolve()
           return;
         }
+        */
 
         var content = fs.readFileSync(filepath, 'utf8')
         var options = {
@@ -164,6 +165,8 @@ var uploadFile = function(file, filename) {
           if(response.statusCode > 204){
             atom.notifications.addWarning("Kunde inte spara alla filer. Kolla dina uppgifter i dynappconfig.json", null)
           }
+          console.log("whhow " + filename)
+          console.log(response)
           var resolveObj = {
             name:name,
             isUploaded: true,

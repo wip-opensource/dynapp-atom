@@ -6,6 +6,7 @@ const path = require('path')
 
 // download only json, css, html and js
 var validateFilesToDownload = function(files) {
+  /*
   for (file in files.fileList) {
     if (file.indexOf('.json') != -1) {
 
@@ -19,6 +20,7 @@ var validateFilesToDownload = function(files) {
       delete files.fileList[file];
     }
   }
+  */
   return files;
 }
 
