@@ -119,7 +119,7 @@ var uploadSource = function(source, file){
 
     var content = fs.readFileSync(filepathJson, 'utf8')
     content = JSON.parse(content);
-    var b64String = new Buffer(fs.readFileSync(filepathPython, 'utf8')).toString('base64');
+    var b64String = new Buffer(fs.readFileSync(filepathPython, 'base64')).toString();
     content.stylesheet = b64String
 
     content = JSON.stringify(content)

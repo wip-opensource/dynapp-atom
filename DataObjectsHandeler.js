@@ -120,9 +120,9 @@ var uploadObject = function(object, file){
     var filepathJson = atom.project.getPaths()[0] + '/data-objects/' + object + '.json';
     var filepathPython =  atom.project.getPaths()[0] + '/data-objects/' + object + '.py'
 
-    var content = fs.readFileSync(filepathJson, 'utf8')
+    var content = fs.readFileSync(filepathJson, 'utf-8')
     content = JSON.parse(content);
-    var b64String = new Buffer(fs.readFileSync(filepathPython, 'utf8')).toString('base64');
+    var b64String = new Buffer(fs.readFileSync(filepathPython, 'base64')).toString();
     content.stylesheet = b64String
     content = JSON.stringify(content)
     var options = {
