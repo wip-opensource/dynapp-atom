@@ -42,6 +42,10 @@ var getFileList = function() {
 
       var options = {
         url: cred.baseUrl + "dynapp-server/rest/groups/" + cred.group + "/apps/" + cred.app + "/data-items/",
+        headers:{
+          'User-Agent': 'dynapp-atom'
+
+        },
         auth: {
           user: cred.username,
           password: cred.password
@@ -68,6 +72,10 @@ var getFileList = function() {
     var dataSourcePromise = new Promise(function(resolve, reject){
       var options = {
         url: cred.baseUrl + "dynapp-server/rest/groups/" + cred.group + "/apps/" + cred.app + "/source/",
+        headers:{
+          'User-Agent': 'dynapp-atom'
+
+        },
         auth: {
           user: cred.username,
           password: cred.password

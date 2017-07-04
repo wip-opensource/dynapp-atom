@@ -13,7 +13,9 @@ var postFile = function(file){
     var filepath = atom.project.getPaths()[0] + '/data-source-items/' + file + '.json';
     var urlString = cred.baseUrl + "dynapp-server/rest/groups/" + cred.group + "/apps/" + cred.app + "/source/" + file
     var  headers = {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'User-Agent': 'dynapp-atom'
+
     };
 
     var content = fs.readFileSync(filepath, 'utf8')
@@ -66,6 +68,10 @@ var addOnDeleteListener = function(){
                   var options = {
                     url: urlString,
                     method: 'DELETE',
+                    headers:{
+                      'User-Agent': 'dynapp-atom'
+
+                    },
                     auth: {
                       'user': cred.username,
                       'pass': cred.password
@@ -112,6 +118,8 @@ var uploadSource = function(source, file){
     var  headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        'User-Agent': 'dynapp-atom'
+
       };
 
     var filepathJson = atom.project.getPaths()[0] + '/data-source-items/' + source + '.json';
@@ -170,6 +178,8 @@ var downloadSource = function(name, etag){
       url: cred.baseUrl + "dynapp-server/rest/groups/" +cred.group + "/apps/" + cred.app + "/source/" + name,
       headers:{
             'Accept': 'application/json',
+            'User-Agent': 'dynapp-atom'
+
           },
       auth: {
         user: cred.username,

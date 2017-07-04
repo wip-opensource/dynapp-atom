@@ -22,6 +22,10 @@ var addOnDeleteListener = function(){
                   var options = {
                     url: urlString,
                     method: 'DELETE',
+                    headers:{
+                      'User-Agent': 'dynapp-atom'
+
+                    },
                     auth: {
                       'user': cred.username,
                       'pass': cred.password
@@ -65,6 +69,8 @@ var postFile = function(file){
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'X-Category': '2',
+        'User-Agent': 'dynapp-atom'
+
 
       };
 
@@ -134,6 +140,8 @@ var uploadFile = function(file, filename) {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
             'X-Category': file['cat'],
+            'User-Agent': 'dynapp-atom'
+
 
           };
 
@@ -167,8 +175,6 @@ var uploadFile = function(file, filename) {
           if(response.statusCode > 204){
             atom.notifications.addWarning("Kunde inte spara alla filer. Kolla dina uppgifter i dynappconfig.json", null)
           }
-          console.log("whhow " + filename)
-          console.log(response)
           var resolveObj = {
             name:name,
             isUploaded: true,
@@ -195,7 +201,11 @@ var downloadFile = function(file, etag) {
         user: cred.username,
         password: cred.password
       },
-      headers:{}
+      headers:{
+        'User-Agent': 'dynapp-atom'
+
+      }
+
     }
 
 
