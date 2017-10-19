@@ -3,15 +3,15 @@ const fs = require('fs');
 const {File} = require('atom')
 const {Project} = require('atom')
 const path = require('path')
-let filelistHandeler = require('./FilelistHandeler.js')
+let fileListHandler = require('./FileListHandler.js')
 
 // Make a post request to the server for new files
 var postFile = function(file){
   return new Promise((resolve, reject) => {
     var cred = getCred()
 
-    var filepath = atom.project.getPaths()[0] + '/data-source-items/' + file + '.json';
-    var urlString = cred.baseUrl + "dynapp-server/rest/groups/" + cred.group + "/apps/" + cred.app + "/source/" + file
+    var filepath = atom.project.getPaths()[0] + '/data-objects/' + file + '.json';
+    var urlString = cred.baseUrl + "dynapp-server/rest/groups/" + cred.group + "/apps/" + cred.app + "/data-object-entities/" + file
     var  headers = {
         'Content-Type': 'application/json',
         'User-Agent': 'dynapp-atom'
@@ -19,7 +19,9 @@ var postFile = function(file){
     };
 
     var content = fs.readFileSync(filepath, 'utf8')
-
+    content = JSON.parse(content)
+    content.name = file
+    content = JSON.stringify(content)
     var options = {
       url: urlString,
       method: 'POST',
@@ -32,11 +34,11 @@ var postFile = function(file){
     };
 
     function callback(error, response, body) {
-      if(response.statusCode != 201){
+      if(response.statusCode != 204){
         atom.notifications.addWarning("Kunde inte spara data. Kolla dina uppgifter i dynappconfig.json", null)
         reject()
       }
-      filelistHandeler.saveFileListToLocal()
+      fileListHandler.saveFileListToLocal()
       addOnDeleteListener()
       resolve()
     }
@@ -49,7 +51,7 @@ module.exports.postFile = postFile;
 var addOnDeleteListener = function(){
   try{
     var cred = getCred()
-    var filepath = atom.project.getPaths()[0] + '/data-source-items'
+    var filepath = atom.project.getPaths()[0] + '/data-objects'
     fs.readdir(filepath, (err, files) => {
       files.forEach(file => {
         var fileName = ""
@@ -60,18 +62,18 @@ var addOnDeleteListener = function(){
         }
         var fileobj = new File(filepath +'/'+ file)
         fileobj.onDidDelete(function(cb){
-          var urlString = cred.baseUrl + "dynapp-server/rest/groups/" + cred.group + "/apps/" + cred.app + "/source/" + fileName
+          var urlString = cred.baseUrl + "dynapp-server/rest/groups/" + cred.group + "/apps/" + cred.app + "/data-object-entities/" + fileName
           const settings = {
             buttons: [
               {
                 onDidClick: function() {
                   var options = {
                     url: urlString,
-                    method: 'DELETE',
                     headers:{
                       'User-Agent': 'dynapp-atom'
 
                     },
+                    method: 'DELETE',
                     auth: {
                       'user': cred.username,
                       'pass': cred.password
@@ -106,31 +108,32 @@ var addOnDeleteListener = function(){
 module.exports.addOnDeleteListener = addOnDeleteListener;
 
 
-var uploadSource = function(source, file){
-  return new Promise(function(resolve, reject){
-    var cred = getCred()
+var uploadObject = function(object, file) {
+  return new Promise((resolve, reject) => {
+    var cred = getCred();
 
-    if(!file['dirty']){
-      resolve()
+    /* TODO: What if this is the first upload? */
+    /* Let's try to let etag handle this instead */
+    if (!file['dirty']) {
+      resolve();
       return;
     }
-    var urlString = cred.baseUrl + "dynapp-server/rest/groups/" + cred.group + "/apps/" + cred.app + "/source/" + source
-    var  headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'User-Agent': 'dynapp-atom'
 
-      };
+    var urlString = cred.baseUrl + "dynapp-server/rest/groups/" + cred.group + "/apps/" + cred.app + "/data-object-entities/" + object;
+    var headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'User-Agent': 'dynapp-atom'
+    };
 
-    var filepathJson = atom.project.getPaths()[0] + '/data-source-items/' + source + '.json';
-    var filepathPython =  atom.project.getPaths()[0] + '/data-source-items/' + source + '.py'
+    var filepathJson = atom.project.getPaths()[0] + '/data-objects/' + object + '.json';
+    var filepathPython =  atom.project.getPaths()[0] + '/data-objects/' + object + '.py';
 
-    var content = fs.readFileSync(filepathJson, 'utf8')
+    var content = fs.readFileSync(filepathJson, 'utf-8');
     content = JSON.parse(content);
     var b64String = new Buffer(fs.readFileSync(filepathPython, 'base64')).toString();
-    content.stylesheet = b64String
-
-    content = JSON.stringify(content)
+    content.stylesheet = b64String;
+    content = JSON.stringify(content);
     var options = {
       url: urlString,
       method: 'PUT',
@@ -143,21 +146,22 @@ var uploadSource = function(source, file){
     };
 
     function callback(error, response, body) {
-      if(response.statusCode > 204){
-        atom.notifications.addWarning("Kunde inte spara alla filer. Kolla dina uppgifter i dynappconfig.json", null)
+      if (response.statusCode > 204) {
+        atom.notifications.addWarning("Kunde inte spara alla filer. Kolla dina uppgifter i dynappconfig.json", null);
       }
       var resolveObj = {
-        name: source,
+        name: object,
         isUploaded: true,
-        etag:response.headers.etag,
-        list:"dataSources"
-      }
-      resolve(resolveObj)
+        etag: response.headers.etag,
+        list:"dataObjects"
+      };
+      resolve(resolveObj);
     }
+
     request(options, callback);
-  })
-}
-module.exports.uploadSource = uploadSource;
+  });
+};
+module.exports.uploadObject = uploadObject;
 
 // get project credentials
 var getCred = function(){
@@ -168,14 +172,14 @@ var getCred = function(){
 }
 
 
-var downloadSource = function(name, etag){
+var downloadObject = function(name, etag){
   return new Promise(function(resolve,reject){
     var cred = getCred()
 
     filepath = atom.project.getPaths()[0]
 
     var options = {
-      url: cred.baseUrl + "dynapp-server/rest/groups/" +cred.group + "/apps/" + cred.app + "/source/" + name,
+      url: cred.baseUrl + "dynapp-server/rest/groups/" +cred.group + "/apps/" + cred.app + "/data-object-entities/" + name,
       headers:{
             'Accept': 'application/json',
             'User-Agent': 'dynapp-atom'
@@ -184,16 +188,14 @@ var downloadSource = function(name, etag){
       auth: {
         user: cred.username,
         password: cred.password
-      },
+      }
     }
 
     if(etag != undefined){
       etag = etag.replace("\"", '')
       etag = etag.replace("\"", '')
       options['headers']["If-None-Match"] = "\"" + etag +"\""
-
     }
-
 
 
     request(options, function(err, res, body) {
@@ -206,23 +208,21 @@ var downloadSource = function(name, etag){
         var resolveObj = {
           fileName: name,
           etag: res.headers.etag,
-          list:"dataSources"
+          list:"dataObjects"
         }
-
 
         var obj = JSON.parse(body)
         var b64String = obj.stylesheet
         var decodedString = new Buffer(b64String, 'base64').toString('utf8')
-        fs.writeFile(filepath + '/data-source-items/' + name + '.py', decodedString, 'binary', function(err) {});
-        fs.writeFile(filepath + '/data-source-items/' + name + '.json', JSON.stringify(obj, null, 4));
+        fs.writeFile(filepath + '/data-objects/' + name + '.py', decodedString, 'binary', function(err) {});
+        fs.writeFile(filepath + '/data-objects/' + name + '.json', JSON.stringify(obj, null, 4));
 
         resolve(resolveObj)
       }else{
         resolve()
       }
-
     });
   });
 }
 
-module.exports.downloadSource = downloadSource;
+module.exports.downloadObject = downloadObject;

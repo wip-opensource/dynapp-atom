@@ -1,10 +1,10 @@
-const request = require('request')
+const request = require('request');
 const fs = require('fs');
-const {File} = require('atom')
-const {Project} = require('atom')
-const path = require('path')
-let filelistHandeler = require('./FilelistHandeler.js')
-
+const {File} = require('atom');
+const {Project} = require('atom');
+const path = require('path');
+const {mkdirp} = require('./utils');
+const fileListHandler = require('./FileListHandler.js');
 
 var addOnDeleteListener = function(){
   try{
@@ -51,7 +51,7 @@ var addOnDeleteListener = function(){
       });
     });
 
-  }catch(ex){
+  } catch(ex) {
 
   }
 }
@@ -66,13 +66,11 @@ var postFile = function(file){
     var filepath = atom.project.getPaths()[0] + '/data-items/' + file;
     var urlString = cred.baseUrl + "dynapp-server/rest/groups/" + cred.group + "/apps/" + cred.app + "/data-items/" + file
     var  headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-Category': '2',
-        'User-Agent': 'dynapp-atom'
-
-
-      };
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'X-Category': '2',
+      'User-Agent': 'dynapp-atom'
+    };
 
     if (file.indexOf('.css') != -1) {
       headers['Content-Type'] = 'text/css'
@@ -105,7 +103,7 @@ var postFile = function(file){
         reject()
       }
       resolve()
-      filelistHandeler.saveFileListToLocal()
+      fileListHandler.saveFileListToLocal()
       addOnDeleteListener()
     }
     request(options, callback);
@@ -126,65 +124,64 @@ var getCred = function(){
 // upload all files from a filelist
 var uploadFile = function(file, filename) {
   return new Promise((resolve, reject) => {
-    var cred = getCred()
-    console.log('uploading file ' + file)
+    var cred = getCred();
 
-        if(!file['dirty']){
-          resolve()
-          return;
-        }
+    /* TODO: What if this is the first upload? */
+    /* Let's try to let etag handle this instead */
+    if (!file['dirty']) {
+      resolve();
+      return;
+    }
 
-        var filepath = atom.project.getPaths()[0] + '/data-items/' + filename;
-        var urlString = cred.baseUrl + "dynapp-server/rest/groups/" + cred.group + "/apps/" + cred.app + "/data-items/" + filename
-        var  headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-Category': file['cat'],
-            'User-Agent': 'dynapp-atom'
+    var filepath = atom.project.getPaths()[0] + '/data-items/' + filename;
+    var urlString = cred.baseUrl + "dynapp-server/rest/groups/" + cred.group + "/apps/" + cred.app + "/data-items/" + filename;
+    var  headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'X-Category': file['cat'],
+      'User-Agent': 'dynapp-atom'
+    };
 
+    if (filename.indexOf('.css') != -1) {
+      headers['Content-Type'] = 'text/css';
+    } else if (filename.indexOf('.html') != -1) {
+      headers['Content-Type'] = 'text/html';
+    } else if (filename.indexOf('.js') != -1) {
+      headers['Content-Type'] = 'text/javascript';
+    } else if(filename.indexOf('.properties') != -1){
+      headers['Content-Type'] = 'text/plain';
+    } else {
+      resolve();
+      return;
+    }
 
-          };
+    var content = fs.readFileSync(filepath, 'utf8');
+    var options = {
+      url: urlString,
+      method: 'PUT',
+      headers: headers,
+      body: content,
+      auth: {
+        'user': cred.username,
+        'pass': cred.password
+      }
+    };
+    var name = filename;
+    var callback =  function(error, response, body) {
+      if (response.statusCode > 204) {
+        atom.notifications.addWarning("Kunde inte spara alla filer. Kolla dina uppgifter i dynappconfig.json: " + body, null);
+      }
+      var resolveObj = {
+        name: name,
+        isUploaded: true,
+        list: "fileList"
+      };
+      resolve(resolveObj);
+    }
 
-        if (filename.indexOf('.css') != -1) {
-          headers['Content-Type'] = 'text/css'
-        } else if (filename.indexOf('.html') != -1) {
-          headers['Content-Type'] = 'text/html'
-        } else if (filename.indexOf('.js') != -1) {
-          headers['Content-Type'] = 'text/javascript'
-        } else if(filename.indexOf('.properties') != -1){
-          headers['Content-Type'] = 'text/plain'
-        } else {
-          resolve()
-          return;
-        }
-
-
-        var content = fs.readFileSync(filepath, 'utf8')
-        var options = {
-          url: urlString,
-          method: 'PUT',
-          headers: headers,
-          body: content,
-          auth: {
-            'user': cred.username,
-            'pass': cred.password
-          }
-        };
-        var name = filename
-        var callback =  function(error, response, body) {
-          if(response.statusCode > 204){
-            atom.notifications.addWarning("Kunde inte spara alla filer. Kolla dina uppgifter i dynappconfig.json", null)
-          }
-          var resolveObj = {
-            name:name,
-            isUploaded: true,
-            list:"fileList"
-          }
-          resolve(resolveObj)
-        }
-        request(options, callback);
-      });
-}
+    request(options, callback);
+  });
+};
 
 module.exports.uploadFile = uploadFile
 
@@ -195,25 +192,25 @@ var downloadFile = function(file, etag) {
 
     filepath = atom.project.getPaths()[0]
 
+    if (file.indexOf(path.sep) != -1) {
+      mkdirp(file, path.join(filepath, 'data-items'));
+    }
+
     var options = {
-      url: cred.baseUrl + "dynapp-server/rest/groups/" +cred.group + "/apps/" + cred.app + "/data-items/" + file,
+      url: cred.baseUrl + "dynapp-server/rest/groups/" + cred.group + "/apps/" + cred.app + "/data-items/" + file,
       auth: {
         user: cred.username,
         password: cred.password
       },
-      headers:{
+      headers: {
         'User-Agent': 'dynapp-atom'
-
       }
-
     }
 
-
-
-    if(etag != undefined){
-      etag = etag.replace("\"", '')
-      etag = etag.replace("\"", '')
-      options['headers']["If-None-Match"] = "\"" + etag +"\""
+    if (etag != undefined) {
+      etag = etag.replace("\"", '');
+      etag = etag.replace("\"", '');
+      options['headers']['If-None-Match'] = "\"" + etag +"\"";
     }
 
     request(options, function(err, res, body) {
