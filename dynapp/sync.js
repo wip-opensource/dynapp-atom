@@ -11,7 +11,8 @@ const rmdir = async function(dir) {
     // TODO: Handle file operations concurrently, but probably is overkill.
     let files = await fs.readdir(dir);
 
-    for (let file of files) {
+    for (let i = 0; i < files.length; i++) {
+      let file = files[i];
       let fileName = path.join(dir, file);
       let stat = fs.statSync(fileName);
 
@@ -39,7 +40,8 @@ async function listFiles(folder, filter) {
   let result = [];
 
   let files = await fs.readdir(folder);
-  for (file of files) {
+  for (let i = 0; i < files.length; i++) {
+    let file = files[i];
     if (filter && !filter(file)) {
       continue;
     }
@@ -54,7 +56,7 @@ async function listFiles(folder, filter) {
     }
   }
 
-  return result;
+  return result.slice(0);
 }
 
 function filterNoNodeModules(fileName) {
@@ -66,8 +68,7 @@ function filterMetaFiles(fileName) {
 }
 
 class DynappObjects {
-  constructor(hashes, folder, filter) {
-    this.hashes = hashes;
+  constructor(folder, filter) {
     this.folder = folder;
     this.filter = filter;
   }
@@ -114,7 +115,8 @@ class DynappObjects {
     // TODO: Reuse list from dirty() and hashes() ?
     let localFiles = await listFiles(objectsPath, this.filter);
 
-    for (let fileName of localFiles) {
+    for (let i = 0; i < localFiles.length; i++) {
+      let fileName = localFiles[i];
       let operation = md5File(path.join(objectsPath, fileName)).then(function(hash) {
         return {
           name: fileName,
@@ -128,7 +130,8 @@ class DynappObjects {
     let files = await Promise.all(operations);
     let result = {};
 
-    for (file of files) {
+    for (let i = 0; i < files.length; i++) {
+      let file = files[i];
       result[file.name] = {
         hash: file.hash
       };
@@ -185,8 +188,8 @@ class DynappObjects {
 }
 
 class DataItems extends DynappObjects {
-  constructor(hashes) {
-    super(hashes, 'data-items', filterNoNodeModules);
+  constructor() {
+    super('data-items', filterNoNodeModules);
   }
 
   createObject (obj, file) {
@@ -203,8 +206,8 @@ class DataItems extends DynappObjects {
 }
 
 class DataSourceItems extends DynappObjects {
-  constructor(hashes) {
-    super(hashes, 'data-source-items', filterMetaFiles);
+  constructor() {
+    super('data-source-items', filterMetaFiles);
   }
 
   createObject (obj, file) {
@@ -222,7 +225,7 @@ class DataSourceItems extends DynappObjects {
 
 class DataObjects extends DynappObjects {
   constructor() {
-    super(hashes, 'data-objects', filterMetaFiles);
+    super('data-objects', filterMetaFiles);
   }
 
   async createObject (obj, file) {
@@ -243,7 +246,7 @@ class DataObjects extends DynappObjects {
 
 class Sync {
   constructor () {
-    this._stateFileName = path.join(config.projectPath(), 'dynapp-state');
+    this._stateFileName = path.join(config.projectPath(), '.dynapp-state');
     this.dataItems = new DataItems();
     this.dataSourceItems = new DataSourceItems();
     this.dataObjects = new DataObjects();
@@ -254,12 +257,11 @@ class Sync {
     return JSON.parse(stateContent);
   }
 
-  setHashes () {
+  async setHashes () {
     let state = await this.state();
-
-    this.dataItems.hashes = state['data-items'];
-    this.dataSourceItems.hashes = state['data-source-items'];
-    this.dataObjects.hashes = state['data-objects'];
+    this.dataItems.hashes = state['data-items'] || {};
+    this.dataSourceItems.hashes = state['data-source-items'] || {};
+    this.dataObjects.hashes = state['data-objects'] || {};
   }
 
   async dumpState () {
@@ -269,12 +271,12 @@ class Sync {
       this.dataObjects.hashes()
     ]);
 
-    let state = Object.assign.apply(Object, [{}].concat(state));
+    let state = Object.assign.apply(Object, [{}].concat(hashes));
     return await fs.writeFile(this._stateFileName, JSON.stringify(state), 'utf8');
   }
 
   async upload () {
-    this.setHashes(state);
+    await this.setHashes();
 
     await Promise.all([
       this.dataItems.upload(),
@@ -305,11 +307,11 @@ class Sync {
 
     let operations = [];
     for (let fileName in unpacked.files) {
-      if (!fileName.startWith('data-items/')) {
+      if (!fileName.startsWith('data-items/')) {
         continue;
       }
 
-      let file = unpackes.file(fileName);
+      let file = unpacked.file(fileName);
 
       operations.push(new Promise(function(resolve, reject) {
         let localFileName = path.join(projectPath, fileName);
@@ -327,17 +329,19 @@ class Sync {
       operations.push(new Promise(function(resolve, reject) {
         unpacked.file('data-objects.json').async('text').then(function(dataObjectsRaw) {
           let dataObjects = JSON.parse(dataObjectsRaw);
+          let dataObjectOperations = [];
 
-          for (dataObject of dataObjects) {
-            let code = new Buffer(dataObjects.stylesheet, 'base64').toString('utf8');
-            let pyName = '{}.py'.format(dataObject.name);
-            let metaName = '{}.meta.json'.format(dataObject.name);
-
+          for (let dataObject of dataObjects) {
+            let code = new Buffer(dataObject.stylesheet, 'base64').toString('utf8');
+            let pyName = dataObject.name + '.py';
+            let metaName = dataObject.name + '.meta.json';
             let pyOperation = fs.writeFile(path.join(projectPath, 'data-objects', pyName), code);
             let metaOperation = fs.writeFile(path.join(projectPath, 'data-objects', metaName), JSON.stringify(dataObject));
 
-            Promise.all([pyOperation, metaOperation]).then(resolve);
+            dataObjectOperations.push(pyOperation, metaOperation);
           }
+
+          Promise.all(dataObjectOperations).then(resolve);
         });
       }));
     }
@@ -345,24 +349,28 @@ class Sync {
     // TODO: Duplicated code form data-objects
     if ('data-source-items.json' in unpacked.files) {
       operations.push(new Promise(function(resolve, reject) {
-        unpacked.file('data-source-items.json').async('text').then(function(dataObjectsRaw) {
-          let dataObjects = JSON.parse(dataObjectsRaw);
+        unpacked.file('data-source-items.json').async('text').then(function(dataSourceItemsRaw) {
+          let dataSourceItems = JSON.parse(dataSourceItemsRaw);
+          let dataSourceItemOperations = [];
 
-          for (dataObject of dataObjects) {
-            let code = new Buffer(dataObjects.stylesheet, 'base64').toString('utf8');
-            let pyName = '{}.py'.format(dataObject.name);
-            let metaName = '{}.meta.json'.format(dataObject.name);
+          for (dataSourceItem of dataSourceItems) {
+            let code = new Buffer(dataSourceItem.stylesheet, 'base64').toString('utf8');
+            let pyName = '{}.py'.format(dataSourceItem.name);
+            let metaName = '{}.meta.json'.format(dataSourceItem.name);
 
             let pyOperation = fs.writeFile(path.join(projectPath, 'data-source-items', pyName), code);
-            let metaOperation = fs.writeFile(path.join(projectPath, 'data-source-items', metaName), JSON.stringify(dataObject));
+            let metaOperation = fs.writeFile(path.join(projectPath, 'data-source-items', metaName), JSON.stringify(dataSourceItem));
 
-            Promise.all([pyOperation, metaOperation]).then(resolve);
+            dataSourceItemOperations.push(pyOperation, metaOperation);
           }
+
+          Promise.all(dataSourceItemOperations).then(resolve);
         });
       }));
     }
 
-    return await Promise.all(operations);
+    await Promise.all(operations);
+    await this.dumpState();
   }
 }
 
