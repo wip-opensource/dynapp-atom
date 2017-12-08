@@ -34,12 +34,12 @@ function baseUrlDataObjects() {
   return urljoin(baseUrl(), 'data-object-entities');
 }
 
-function _modifyEntity(url, body, method) {
+function _modifyEntity(url, body, method, contentType) {
   return request({
     url: url,
     method: method,
     headers: Object.assign({
-      'Content-Type': mime.lookup(url) || '',
+      'Content-Type': contentType || mime.lookup(url) || '',
       'X-Category': '2'
     }, _headers),
     body: body,
@@ -57,38 +57,47 @@ function _deleteEntity(url) {
 }
 
 function updateDataItem(dataItem, body) {
+  console.log('update data-item');
   return _modifyEntity(urljoin(baseUrlDataItems(), dataItem), body, 'PUT');
 }
 
 function createDataItem(dataItem, body) {
+  console.log('create data-item');
   return _modifyEntity(urljoin(baseUrlDataItems(), dataItem), body, 'POST');
 }
 
 function deleteDataItem(dataItem) {
+  console.log('delete data-item')
   return _deleteEntity(urljoin(baseUrlDataItems(), dataItem));
 }
 
 function updateDataSourceItem(dataSourceItem, body) {
-  return _modifyEntity(urljoin(baseUrlDataSourceItems(), dataSourceItem), body, 'PUT');
+  console.log('update data-source-item');
+  return _modifyEntity(urljoin(baseUrlDataSourceItems(), dataSourceItem), body, 'PUT', 'application/json');
 }
 
 function createDataSourceItem(dataSourceItem, body) {
-  return _modifyEntity(urljoin(baseUrlDataSourceItems(), dataSourceItem), body, 'POST');
+  console.log('create data-source-item');
+  return _modifyEntity(urljoin(baseUrlDataSourceItems(), dataSourceItem), body, 'POST', 'application/json');
 }
 
 function deleteDataSourceItem(dataSourceItem) {
+  console.log('delete data-source-item');
   return _deleteEntity(urljoin(baseUrlDataSourceItems(), dataSourceItem));
 }
 
 function updateDataObject(dataObject, body) {
-  return _modifyEntity(urljoin(baseUrlDataObjects(), dataObject), body, 'PUT');
+  console.log('create data-object', urljoin(baseUrlDataObjects(), dataObject));
+  return _modifyEntity(urljoin(baseUrlDataObjects(), dataObject), body, 'PUT', 'application/json');
 }
 
 function createDataObject(dataObject, body) {
-  return _modifyEntity(urljoin(baseUrlDataObjects(), dataObject), body, 'POST');
+  console.log('update data-object');
+  return _modifyEntity(urljoin(baseUrlDataObjects(), dataObject), body, 'POST', 'application/json');
 }
 
 function deleteDataObject(dataObject) {
+  console.log('delete data-object');
   return _deleteEntity(urljoin(baseUrlDataObjects(), dataObject));
 }
 

@@ -6,6 +6,10 @@ const path = require('path');
 const mkdirp = require('mkdirp');
 const JSZip = require('jszip');
 
+function json_stringify_readable(content) {
+  return JSON.stringify(content, null, 4);
+}
+
 // Remove dir with files recursively
 const rmdir = async function(dir) {
     // TODO: Handle file operations concurrently, but probably is overkill.
@@ -86,11 +90,11 @@ class DynappObjects {
       let file = fs.createReadStream(path.join(objectsPath, obj));
       operations.push(this.createObject(obj, file));
     }
-    for (obj of changedObjects) {
+    for (let obj of changedObjects) {
       let file = fs.createReadStream(path.join(objectsPath, obj));
       operations.push(this.updateObject(obj, file));
     }
-    for (obj of deletedObjects) {
+    for (let obj of deletedObjects) {
       operations.push(this.deleteObject(obj));
     }
 
@@ -140,6 +144,10 @@ class DynappObjects {
     return result;
   }
 
+  setHashes (hashes) {
+    this._hashes = hashes;
+  }
+
   async updateMeta (metaFile) {
     let pyFile = metaFile.substring(0, metaFile.lastIndexOf('.meta.json')) + '.py';
     let metaFilePath = path.join(this._objectsPath(), metaFile);
@@ -151,11 +159,11 @@ class DynappObjects {
     let meta = JSON.parse(metaRaw);
 
     meta.stylesheet = body;
-    await fs.writeFile(metaFilePath, JSON.stringify(meta), 'utf8');
+    await fs.writeFile(metaFilePath, json_stringify_readable(meta), 'utf8');
   }
 
   async dirty() {
-    let objectsPath = this.objectsPath();
+    let objectsPath = this._objectsPath();
     // TODO: Reuse list from dirty() and hashes() ?
     let localFiles = await listFiles(objectsPath, this.filter);
     let newObjects = [];
@@ -163,9 +171,9 @@ class DynappObjects {
     let changedObjectsOperations = [];
 
     for (let file of localFiles) {
-      if (file in this.hashes) {
-        let operation = md5File(path.join(objectsPath, file)).then(function(hash) {
-          return this.hashes[file].hash !== hash ? file : null;
+      if (file in this._hashes) {
+        let operation = md5File(path.join(objectsPath, file)).then((hash) => {
+          return this._hashes[file].hash !== hash ? file : null;
         });
         changedObjectsOperations.push(operation);
       } else {
@@ -173,9 +181,9 @@ class DynappObjects {
       }
     }
 
-    for (dataItem in dataItems) {
-      if (localFiles.indexOf(dataItem) === -1) {
-        deletedObjects.push(dataItem);
+    for (let fileName in this._hashes) {
+      if (localFiles.indexOf(fileName) === -1) {
+        deletedObjects.push(fileName);
       }
     }
 
@@ -192,16 +200,18 @@ class DataItems extends DynappObjects {
     super('data-items', filterNoNodeModules);
   }
 
-  createObject (obj, file) {
-    return api.createDataItem(obj, file);
+  createObject (dataItem, file) {
+    // TODO: Should we use PUT? Then we have to catch eventual error and try PUT if POST already exists.
+    // Seems like PUT just overrides everything, and that is kind of what we want.
+    return api.updateDataItem(dataItem, file);
   }
 
-  updateObject (obj, file) {
-    return api.updateDataItem(obj, file);
+  updateObject (dataItem, file) {
+    return api.updateDataItem(dataItem, file);
   }
 
-  deleteObject (obj) {
-    return api.deleteDataItem(obj);
+  deleteObject (dataItem) {
+    return api.deleteDataItem(dataItem);
   }
 }
 
@@ -210,16 +220,18 @@ class DataSourceItems extends DynappObjects {
     super('data-source-items', filterMetaFiles);
   }
 
-  createObject (obj, file) {
-    return api.createDataSourceItem(obj, file);
+  async createObject (dataSourceItem, file) {
+    await this.updateMeta(dataSourceItem);
+    return await api.updateDataSourceItem(dataSourceItem.substring(0, dataSourceItem.lastIndexOf('.meta.json')), file);
   }
 
-  updateObject (obj, file) {
-    return api.updateDataSourceItem(obj, file);
+  async updateObject (dataSourceItem, file) {
+    await this.updateMeta(dataSourceItem);
+    return await api.updateDataSourceItem(dataSourceItem.substring(0, dataSourceItem.lastIndexOf('.meta.json')), file);
   }
 
-  deleteObject (obj) {
-    return api.deleteDataSourceItem(obj);
+  deleteObject (dataSourceItem) {
+    return api.deleteDataSourceItem(dataSourceItem);
   }
 }
 
@@ -228,19 +240,19 @@ class DataObjects extends DynappObjects {
     super('data-objects', filterMetaFiles);
   }
 
-  async createObject (obj, file) {
-    await this.updateMeta();
-    return await api.createDataObject(obj, file);
+  async createObject (dataObject, file) {
+    await this.updateMeta(dataObject);
+    return await api.updateDataObject(dataObject.substring(0, dataObject.lastIndexOf('.meta.json')), file);
   }
 
-  async updateObject (obj, file) {
-    await this.updateMeta();
-    return await api.updateDataObject(obj, file);
+  async updateObject (dataObject, file) {
+    // TODO: Move this to dirty
+    await this.updateMeta(dataObject);
+    return await api.updateDataObject(dataObject.substring(0, dataObject.lastIndexOf('.meta.json')), file);
   }
 
-  async deleteObject (obj) {
-    await this.updateMeta();
-    return await api.deleteDataObject(obj);
+  deleteObject (dataObject) {
+    return api.deleteDataObject(datObject);
   }
 }
 
@@ -253,15 +265,28 @@ class Sync {
   }
 
   async state () {
-    let stateContent = await fs.readFile(this._stateFileName, 'utf8');
+    let stateContent;
+
+    try {
+      stateContent = await fs.readFile(this._stateFileName, 'utf8');
+    } catch(err) {
+      // Ensure we have a state-file
+      if (err.code === 'ENOENT') {
+        stateContent = json_stringify_readable({});
+        await fs.writeFile(this._stateFileName, stateContent, 'utf8');
+      } else {
+        throw err;
+      }
+    }
+
     return JSON.parse(stateContent);
   }
 
   async setHashes () {
     let state = await this.state();
-    this.dataItems.hashes = state['data-items'] || {};
-    this.dataSourceItems.hashes = state['data-source-items'] || {};
-    this.dataObjects.hashes = state['data-objects'] || {};
+    this.dataItems.setHashes(state['data-items'] || {});
+    this.dataSourceItems.setHashes(state['data-source-items'] || {});
+    this.dataObjects.setHashes(state['data-objects'] || {});
   }
 
   async dumpState () {
@@ -271,8 +296,12 @@ class Sync {
       this.dataObjects.hashes()
     ]);
 
-    let state = Object.assign.apply(Object, [{}].concat(hashes));
-    return await fs.writeFile(this._stateFileName, JSON.stringify(state), 'utf8');
+    let state = {
+      'data-items': hashes[0],
+      'data-source-items': hashes[1],
+      'data-objects': hashes[2]
+    };
+    return await fs.writeFile(this._stateFileName, json_stringify_readable(state), 'utf8');
   }
 
   async upload () {
@@ -336,7 +365,7 @@ class Sync {
             let pyName = dataObject.name + '.py';
             let metaName = dataObject.name + '.meta.json';
             let pyOperation = fs.writeFile(path.join(projectPath, 'data-objects', pyName), code);
-            let metaOperation = fs.writeFile(path.join(projectPath, 'data-objects', metaName), JSON.stringify(dataObject));
+            let metaOperation = fs.writeFile(path.join(projectPath, 'data-objects', metaName), json_stringify_readable(dataObject));
 
             dataObjectOperations.push(pyOperation, metaOperation);
           }
@@ -359,7 +388,7 @@ class Sync {
             let metaName = '{}.meta.json'.format(dataSourceItem.name);
 
             let pyOperation = fs.writeFile(path.join(projectPath, 'data-source-items', pyName), code);
-            let metaOperation = fs.writeFile(path.join(projectPath, 'data-source-items', metaName), JSON.stringify(dataSourceItem));
+            let metaOperation = fs.writeFile(path.join(projectPath, 'data-source-items', metaName), json_stringify_readable(dataSourceItem));
 
             dataSourceItemOperations.push(pyOperation, metaOperation);
           }
