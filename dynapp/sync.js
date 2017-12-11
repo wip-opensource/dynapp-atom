@@ -46,10 +46,12 @@ async function listFiles(folder, filter) {
   let files = await fs.readdir(folder);
   for (let i = 0; i < files.length; i++) {
     let file = files[i];
-    if (filter && !filter(file)) {
+    let fileWithPath = path.join(folder, file);
+
+    if (filter && !filter(fileWithPath)) {
       continue;
     }
-    let stats = await fs.stat(path.join(folder, file));
+    let stats = await fs.stat(fileWithPath);
     if (stats.isDirectory()) {
       let subFiles = await listFiles(path.join(folder, file), filter);
       subFiles.forEach(subFile => {
@@ -148,6 +150,8 @@ class DynappObjects {
     this._hashes = hashes;
   }
 
+  // TODO: Should be moved out of this class and into one that is more specific
+  // to entities that has this kind of meta file.
   async updateMeta (metaFile) {
     let pyFile = metaFile.substring(0, metaFile.lastIndexOf('.meta.json')) + '.py';
     let metaFilePath = path.join(this._objectsPath(), metaFile);
@@ -171,6 +175,7 @@ class DynappObjects {
     let changedObjectsOperations = [];
 
     for (let file of localFiles) {
+      await this.updateMeta(file);
       if (file in this._hashes) {
         let operation = md5File(path.join(objectsPath, file)).then((hash) => {
           return this._hashes[file].hash !== hash ? file : null;
@@ -213,6 +218,10 @@ class DataItems extends DynappObjects {
   deleteObject (dataItem) {
     return api.deleteDataItem(dataItem);
   }
+
+  // TODO: This should be the other way, DataSourceItem and DataObject should explicitly get this behaviour.
+  async updateMeta(dataItem) {
+  }
 }
 
 class DataSourceItems extends DynappObjects {
@@ -220,14 +229,12 @@ class DataSourceItems extends DynappObjects {
     super('data-source-items', filterMetaFiles);
   }
 
-  async createObject (dataSourceItem, file) {
-    await this.updateMeta(dataSourceItem);
-    return await api.updateDataSourceItem(dataSourceItem.substring(0, dataSourceItem.lastIndexOf('.meta.json')), file);
+  createObject (dataSourceItem, file) {
+    return api.updateDataSourceItem(dataSourceItem.substring(0, dataSourceItem.lastIndexOf('.meta.json')), file);
   }
 
-  async updateObject (dataSourceItem, file) {
-    await this.updateMeta(dataSourceItem);
-    return await api.updateDataSourceItem(dataSourceItem.substring(0, dataSourceItem.lastIndexOf('.meta.json')), file);
+  updateObject (dataSourceItem, file) {
+    return api.updateDataSourceItem(dataSourceItem.substring(0, dataSourceItem.lastIndexOf('.meta.json')), file);
   }
 
   deleteObject (dataSourceItem) {
@@ -240,15 +247,12 @@ class DataObjects extends DynappObjects {
     super('data-objects', filterMetaFiles);
   }
 
-  async createObject (dataObject, file) {
-    await this.updateMeta(dataObject);
-    return await api.updateDataObject(dataObject.substring(0, dataObject.lastIndexOf('.meta.json')), file);
+  createObject (dataObject, file) {
+    return api.updateDataObject(dataObject.substring(0, dataObject.lastIndexOf('.meta.json')), file);
   }
 
-  async updateObject (dataObject, file) {
-    // TODO: Move this to dirty
-    await this.updateMeta(dataObject);
-    return await api.updateDataObject(dataObject.substring(0, dataObject.lastIndexOf('.meta.json')), file);
+  updateObject (dataObject, file) {
+    return api.updateDataObject(dataObject.substring(0, dataObject.lastIndexOf('.meta.json')), file);
   }
 
   deleteObject (dataObject) {

@@ -57,47 +57,47 @@ function _deleteEntity(url) {
 }
 
 function updateDataItem(dataItem, body) {
-  console.log('update data-item');
+  console.log('update data-item', dataItem);
   return _modifyEntity(urljoin(baseUrlDataItems(), dataItem), body, 'PUT');
 }
 
 function createDataItem(dataItem, body) {
-  console.log('create data-item');
+  console.log('create data-item', dataItem);
   return _modifyEntity(urljoin(baseUrlDataItems(), dataItem), body, 'POST');
 }
 
 function deleteDataItem(dataItem) {
-  console.log('delete data-item')
+  console.log('delete data-item', dataItem)
   return _deleteEntity(urljoin(baseUrlDataItems(), dataItem));
 }
 
 function updateDataSourceItem(dataSourceItem, body) {
-  console.log('update data-source-item');
+  console.log('update data-source-item', dataSourceItem);
   return _modifyEntity(urljoin(baseUrlDataSourceItems(), dataSourceItem), body, 'PUT', 'application/json');
 }
 
 function createDataSourceItem(dataSourceItem, body) {
-  console.log('create data-source-item');
+  console.log('create data-source-item', dataSourceItem);
   return _modifyEntity(urljoin(baseUrlDataSourceItems(), dataSourceItem), body, 'POST', 'application/json');
 }
 
 function deleteDataSourceItem(dataSourceItem) {
-  console.log('delete data-source-item');
+  console.log('delete data-source-item', dataSourceItem);
   return _deleteEntity(urljoin(baseUrlDataSourceItems(), dataSourceItem));
 }
 
 function updateDataObject(dataObject, body) {
-  console.log('create data-object', urljoin(baseUrlDataObjects(), dataObject));
+  console.log('create data-object', dataObject);
   return _modifyEntity(urljoin(baseUrlDataObjects(), dataObject), body, 'PUT', 'application/json');
 }
 
 function createDataObject(dataObject, body) {
-  console.log('update data-object');
+  console.log('update data-object', dataObject);
   return _modifyEntity(urljoin(baseUrlDataObjects(), dataObject), body, 'POST', 'application/json');
 }
 
 function deleteDataObject(dataObject) {
-  console.log('delete data-object');
+  console.log('delete data-object', dataObject);
   return _deleteEntity(urljoin(baseUrlDataObjects(), dataObject));
 }
 
