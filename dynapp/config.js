@@ -9,7 +9,7 @@ module.exports = {
   projectPath,
   // TODO: Need a better interface to this
   config () {
-    let content = fs.readFileSync(path.join(projectPath(), 'dynappConfig.json'), 'utf8');
+    let content = fs.readFileSync(path.join(projectPath(), 'dynappconfig.json'), 'utf8');
     return JSON.parse(content);
   }
 }
