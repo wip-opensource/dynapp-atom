@@ -256,7 +256,7 @@ class DataObjects extends DynappObjects {
   }
 
   deleteObject (dataObject) {
-    return api.deleteDataObject(datObject);
+    return api.deleteDataObject(dataObject);
   }
 }
 
@@ -386,10 +386,10 @@ class Sync {
           let dataSourceItems = JSON.parse(dataSourceItemsRaw);
           let dataSourceItemOperations = [];
 
-          for (dataSourceItem of dataSourceItems) {
+          for (let dataSourceItem of dataSourceItems) {
             let code = new Buffer(dataSourceItem.stylesheet, 'base64').toString('utf8');
-            let pyName = '{}.py'.format(dataSourceItem.name);
-            let metaName = '{}.meta.json'.format(dataSourceItem.name);
+            let pyName = dataSourceItem.name + '.py';
+            let metaName = dataSourceItem.name + '.meta.json';
 
             let pyOperation = fs.writeFile(path.join(projectPath, 'data-source-items', pyName), code);
             let metaOperation = fs.writeFile(path.join(projectPath, 'data-source-items', metaName), json_stringify_readable(dataSourceItem));
