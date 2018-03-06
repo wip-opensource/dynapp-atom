@@ -2,7 +2,7 @@ const path = require('path');
 const fs = require('fs-extra');
 
 function projectPath() {
-  return atom.project.getPaths()[0];
+  return process.cwd();
 }
 
 module.exports = {
