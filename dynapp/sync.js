@@ -407,4 +407,7 @@ class Sync {
   }
 }
 
-module.exports = new Sync();
+// TODO: Defer instantiation to the caller instead.
+module.exports = {
+  Sync: Sync
+}

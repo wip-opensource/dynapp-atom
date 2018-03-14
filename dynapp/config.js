@@ -1,8 +1,10 @@
 const path = require('path');
 const fs = require('fs-extra');
 
+// TODO: Should be passed as argument to Sync constructor instead, like `new Sync({projectPath: '...'})`.
+// TODO: Pass as argument to not make any coupling to Atom.
 function projectPath() {
-  return process.cwd();
+  return atom.project.getPaths()[0];
 }
 
 module.exports = {
