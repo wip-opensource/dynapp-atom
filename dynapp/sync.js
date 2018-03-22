@@ -365,7 +365,12 @@ class Sync {
           let dataObjectOperations = [];
 
           for (let dataObject of dataObjects) {
-            let code = new Buffer(dataObject.stylesheet, 'base64').toString('utf8');
+	    let code;
+	    if (dataObject.stylesheet) {
+              code = new Buffer(dataObject.stylesheet, 'base64').toString('utf8');
+	    } else {
+              code = '';
+	    }
             let pyName = dataObject.name + '.py';
             let metaName = dataObject.name + '.meta.json';
             let pyOperation = fs.writeFile(path.join(projectPath, 'data-objects', pyName), code);
