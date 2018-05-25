@@ -1,7 +1,8 @@
-# wip-atom package
+# dynapp-atom package
 
 ## Get started!
 
+* Ensure you have atom of version >= 1.26.0
 * Open your terminal, write apm install dynapp-atom
 * Create an empty directory and open it with atom.
 * In the menu, press `packages`, then `dynapp-atom`, then `create config file` (or press ctrl + alt + c)
