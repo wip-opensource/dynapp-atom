@@ -262,22 +262,25 @@ class DataObjects extends DynappObjects {
 
 class Sync {
   constructor () {
-    this._stateFileName = path.join(config.projectPath(), '.dynapp-state');
     this.dataItems = new DataItems();
     this.dataSourceItems = new DataSourceItems();
     this.dataObjects = new DataObjects();
+  }
+
+  getStateFilePath () {
+    return config.projectFilePath('.dynapp-state');
   }
 
   async state () {
     let stateContent;
 
     try {
-      stateContent = await fs.readFile(this._stateFileName, 'utf8');
+      stateContent = await fs.readFile(this.getStateFilePath(), 'utf8');
     } catch(err) {
       // Ensure we have a state-file
       if (err.code === 'ENOENT') {
         stateContent = json_stringify_readable({});
-        await fs.writeFile(this._stateFileName, stateContent, 'utf8');
+        await fs.writeFile(this.getStateFilePath(), stateContent, 'utf8');
       } else {
         throw err;
       }
@@ -305,7 +308,7 @@ class Sync {
       'data-source-items': hashes[1],
       'data-objects': hashes[2]
     };
-    return await fs.writeFile(this._stateFileName, json_stringify_readable(state), 'utf8');
+    return await fs.writeFile(this.getStateFilePath(), json_stringify_readable(state), 'utf8');
   }
 
   async upload () {
