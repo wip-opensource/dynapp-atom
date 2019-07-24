@@ -70,7 +70,7 @@ function filterNoNodeModules(fileName) {
 }
 
 function filterMetaFiles(fileName) {
-  return fileName.endsWith('.meta.json');
+  return fileName.endsWith('.py');
 }
 
 class DynappObjects {
@@ -89,12 +89,10 @@ class DynappObjects {
     let [newObjects, changedObjects, deletedObjects] = await this.dirty();
 
     for (let obj of newObjects) {
-      let file = fs.createReadStream(path.join(objectsPath, obj));
-      operations.push(this.createObject(obj, file));
+      operations.push(this.createObject(obj, path.join(objectsPath, obj)));
     }
     for (let obj of changedObjects) {
-      let file = fs.createReadStream(path.join(objectsPath, obj));
-      operations.push(this.updateObject(obj, file));
+      operations.push(this.updateObject(obj, path.join(objectsPath, obj)));
     }
     for (let obj of deletedObjects) {
       operations.push(this.deleteObject(obj));
@@ -150,32 +148,36 @@ class DynappObjects {
     this._hashes = hashes;
   }
 
-  // TODO: Should be moved out of this class and into one that is more specific
-  // to entities that has this kind of meta file.
-  async updateMeta (metaFile) {
-    let pyFile = metaFile.substring(0, metaFile.lastIndexOf('.meta.json')) + '.py';
-    let metaFilePath = path.join(this._objectsPath(), metaFile);
+  async generateMeta (file) {
+    // Generates a meta json file, used for updating data-sources and -objects
+    let pyFile = file;
+    let metaFilePath = file.substring(0, file.lastIndexOf('.py')) + '.meta.json';
 
-    let bodyRaw = await fs.readFile(path.join(this._objectsPath(), pyFile), 'utf8');
+    let bodyRaw = await fs.readFile(pyFile, 'utf8');
     let body = new Buffer(bodyRaw).toString('base64');
 
-    let metaRaw = await fs.readFile(metaFilePath, 'utf8');
+    let metaRaw = '{}';
+    try {
+      metaRaw = await fs.readFile(metaFilePath, 'utf8');
+    } catch(err) {
+      if (err.code !== 'ENOENT') {
+        throw err;
+      }
+    }
     let meta = JSON.parse(metaRaw);
 
     meta.stylesheet = body;
-    await fs.writeFile(metaFilePath, json_stringify_readable(meta), 'utf8');
+    return json_stringify_readable(meta);
   }
 
   async dirty() {
     let objectsPath = this._objectsPath();
-    // TODO: Reuse list from dirty() and hashes() ?
     let localFiles = await listFiles(objectsPath, this.filter);
     let newObjects = [];
     let deletedObjects = [];
     let changedObjectsOperations = [];
 
     for (let file of localFiles) {
-      await this.updateMeta(file);
       if (file in this._hashes) {
         let operation = md5File(path.join(objectsPath, file)).then((hash) => {
           return this._hashes[file].hash !== hash ? file : null;
@@ -208,19 +210,15 @@ class DataItems extends DynappObjects {
   createObject (dataItem, file) {
     // TODO: Should we use PUT? Then we have to catch eventual error and try PUT if POST already exists.
     // Seems like PUT just overrides everything, and that is kind of what we want.
-    return api.updateDataItem(dataItem, file);
+    return api.updateDataItem(dataItem, fs.createReadStream(file));
   }
 
   updateObject (dataItem, file) {
-    return api.updateDataItem(dataItem, file);
+    return api.updateDataItem(dataItem, fs.createReadStream(file));
   }
 
   deleteObject (dataItem) {
     return api.deleteDataItem(dataItem);
-  }
-
-  // TODO: This should be the other way, DataSourceItem and DataObject should explicitly get this behaviour.
-  async updateMeta(dataItem) {
   }
 }
 
@@ -229,12 +227,12 @@ class DataSourceItems extends DynappObjects {
     super('data-source-items', filterMetaFiles);
   }
 
-  createObject (dataSourceItem, file) {
-    return api.updateDataSourceItem(dataSourceItem.substring(0, dataSourceItem.lastIndexOf('.meta.json')), file);
+  async createObject (dataSourceItem, file) {
+    return await api.updateDataSourceItem(dataSourceItem.substring(0, dataSourceItem.lastIndexOf('.py')), await this.generateMeta(file));
   }
 
-  updateObject (dataSourceItem, file) {
-    return api.updateDataSourceItem(dataSourceItem.substring(0, dataSourceItem.lastIndexOf('.meta.json')), file);
+  async updateObject (dataSourceItem, file) {
+    return await api.updateDataSourceItem(dataSourceItem.substring(0, dataSourceItem.lastIndexOf('.py')), await this.generateMeta(file));
   }
 
   deleteObject (dataSourceItem) {
@@ -247,12 +245,12 @@ class DataObjects extends DynappObjects {
     super('data-objects', filterMetaFiles);
   }
 
-  createObject (dataObject, file) {
-    return api.updateDataObject(dataObject.substring(0, dataObject.lastIndexOf('.meta.json')), file);
+  async createObject (dataObject, file) {
+    return await api.updateDataObject(dataObject.substring(0, dataObject.lastIndexOf('.py')), await this.generateMeta(file));
   }
 
-  updateObject (dataObject, file) {
-    return api.updateDataObject(dataObject.substring(0, dataObject.lastIndexOf('.meta.json')), file);
+  async updateObject (dataObject, file) {
+    return await api.updateDataObject(dataObject.substring(0, dataObject.lastIndexOf('.py')), await this.generateMeta(file));
   }
 
   deleteObject (dataObject) {
@@ -368,12 +366,13 @@ class Sync {
           let dataObjectOperations = [];
 
           for (let dataObject of dataObjects) {
-	    let code;
-	    if (dataObject.stylesheet) {
+            let code;
+            if (dataObject.stylesheet) {
               code = new Buffer(dataObject.stylesheet, 'base64').toString('utf8');
-	    } else {
+            } else {
               code = '';
-	    }
+            }
+            dataObject.stylesheet = '<See corresponding .py file>';
             let pyName = dataObject.name + '.py';
             let metaName = dataObject.name + '.meta.json';
             let pyOperation = fs.writeFile(path.join(projectPath, 'data-objects', pyName), code);
@@ -395,7 +394,14 @@ class Sync {
           let dataSourceItemOperations = [];
 
           for (let dataSourceItem of dataSourceItems) {
-            let code = new Buffer(dataSourceItem.stylesheet, 'base64').toString('utf8');
+            let code;
+            if (dataSourceItem.stylesheet) {
+              code = new Buffer(dataSourceItem.stylesheet, 'base64').toString('utf8');
+            }
+            else {
+              code = '';
+            }
+            dataSourceItem.stylesheet = '<See corresponding .py file>';
             let pyName = dataSourceItem.name + '.py';
             let metaName = dataSourceItem.name + '.meta.json';
 
