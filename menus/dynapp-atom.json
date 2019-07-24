@@ -14,6 +14,10 @@
               "command": "dynapp-atom:createConfig"
             },
             {
+              "label": "Create ignorefile",
+              "command": "dynapp-atom:createIgnore"
+            },
+            {
               "label": "Download project",
               "command": "dynapp-atom:download"
             },
