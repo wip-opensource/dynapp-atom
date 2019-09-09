@@ -1,7 +1,7 @@
 {
   "name": "dynapp-atom",
   "main": "./lib/dynapp-atom",
-  "version": "3.1.1",
+  "version": "3.1.2",
   "description": "Edit your dynapp projects in atom",
   "keywords": [],
   "repository": "https://github.com/wip-opensource/dynapp-atom",
@@ -11,12 +11,11 @@
   },
   "dependencies": {
     "chokidar": "^1.7.0",
-    "fs-extra": "^4.0.2",
+    "fs-extra": "^8.1.0",
     "jszip": "^3.1.5",
     "md5-file": "^3.2.3",
     "mime-types": "^2.1.17",
     "mkdirp": "^0.5.1",
-    "npm": "^5.7.1",
     "path": "^0.12.7",
     "request": "^2.81.0",
     "request-promise-native": "^1.0.5",
