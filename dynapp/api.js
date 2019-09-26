@@ -34,14 +34,14 @@ function baseUrlDataObjects() {
   return urljoin(baseUrl(), 'data-object-entities');
 }
 
-function _modifyEntity(url, body, method, contentType) {
+function _modifyEntity(url, body, method, contentType, headers) {
   return request({
     url: url,
     method: method,
     headers: Object.assign({
       'Content-Type': contentType || mime.lookup(url) || '',
       'X-Category': '2'
-    }, _headers),
+    }, _headers, headers),
     body: body,
     auth: auth()
   });
@@ -56,14 +56,23 @@ function _deleteEntity(url) {
   });
 }
 
-function updateDataItem(dataItem, body) {
-  console.log('update data-item', dataItem);
-  return _modifyEntity(urljoin(baseUrlDataItems(), dataItem), body, 'PUT');
+function headerifyDataItemMeta (meta) {
+  var headers = {};
+  if (meta.key != null)
+    headers['X-Key'] = meta.key;
+  if (meta.category != null)
+    headers['X-Category'] = meta.category;
+  return headers;
 }
 
-function createDataItem(dataItem, body) {
+function updateDataItem(dataItem, body, meta) {
+  console.log('update data-item', dataItem);
+  return _modifyEntity(urljoin(baseUrlDataItems(), dataItem), body, 'PUT', null, headerifyDataItemMeta(meta));
+}
+
+function createDataItem(dataItem, body, meta) {
   console.log('create data-item', dataItem);
-  return _modifyEntity(urljoin(baseUrlDataItems(), dataItem), body, 'POST');
+  return _modifyEntity(urljoin(baseUrlDataItems(), dataItem), body, 'POST', null, headerifyDataItemMeta(meta));
 }
 
 function deleteDataItem(dataItem) {

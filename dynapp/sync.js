@@ -27,7 +27,7 @@ const rmdir = async function(dir) {
           // rmdir recursively
           await rmdir(fileName);
       } else {
-          // rm fiilename
+          // rm filename
           await fs.unlink(fileName);
       }
     }
@@ -70,13 +70,16 @@ function filterNoNodeModules(fileName) {
 }
 
 function filterMetaFiles(fileName) {
-  return fileName.endsWith('.py');
+  return !fileName.endsWith('.meta.json');
 }
 
 class DynappObjects {
-  constructor(folder, filter) {
+  constructor(folder, fileExt, filter) {
     this.folder = folder;
-    this.filter = filter;
+    // TODO: This is not good, dirt hacky workaround.
+    // Should just use a single meta-file per type (data-items, data-source-items, data-objects)
+    this.fileExt = fileExt || '';
+    this.filter = filter || (() => true);
   }
 
   _objectsPath () {
@@ -95,7 +98,13 @@ class DynappObjects {
       operations.push(this.updateObject(obj, path.join(objectsPath, obj)));
     }
     for (let obj of deletedObjects) {
-      operations.push(this.deleteObject(obj));
+      operations.push(this.deleteObject(obj).catch(err => {
+        // File has been removed by other means, everything is good
+        if (err instanceof StatusCodeError && err.statusCode === 404)
+          return err.message;
+        else
+          throw err;
+      }));
     }
 
     return await Promise.all(operations);
@@ -148,13 +157,18 @@ class DynappObjects {
     this._hashes = hashes;
   }
 
+  async readMeta (file) {
+    let metaFilePath = file + '.meta.json';
+    let metaRaw = await fs.readFile(metaFilePath, 'utf8');
+    return JSON.parse(metaRaw);
+  }
+
   async generateMeta (file) {
     // Generates a meta json file, used for updating data-sources and -objects
-    let pyFile = file;
     let metaFilePath = file.substring(0, file.lastIndexOf('.py')) + '.meta.json';
 
-    let bodyRaw = await fs.readFile(pyFile, 'utf8');
-    let body = new Buffer(bodyRaw).toString('base64');
+    let bodyRaw = await fs.readFile(file, 'utf8');
+    let body = Buffer.from(bodyRaw).toString('base64');
 
     let metaRaw = '{}';
     try {
@@ -183,7 +197,7 @@ class DynappObjects {
           return this._hashes[file].hash !== hash ? file : null;
         });
         changedObjectsOperations.push(operation);
-      } else {
+      } else if (!file.endsWith('.meta.json')) {
         newObjects.push(file);
       }
     }
@@ -197,6 +211,10 @@ class DynappObjects {
     // Remove all nulls returned in above loop
     let changedObjects = (await Promise.all(changedObjectsOperations))
       .filter(item => !!item);
+    changedObjects = changedObjects.map(item => item.replace(/\.meta\.json$/, this.fileExt));
+    // Remove duplicates. We might have caught meta files that we formatted to be origin files.
+    // Because if meta changes origin should be updated.
+    changedObjects = [...new Set(changedObjects)];
 
     return [newObjects, changedObjects, deletedObjects];
   }
@@ -204,17 +222,17 @@ class DynappObjects {
 
 class DataItems extends DynappObjects {
   constructor() {
-    super('data-items', filterNoNodeModules);
+    super('data-items', null, filterNoNodeModules);
   }
 
-  createObject (dataItem, file) {
+  async createObject (dataItem, file) {
     // TODO: Should we use PUT? Then we have to catch eventual error and try PUT if POST already exists.
     // Seems like PUT just overrides everything, and that is kind of what we want.
-    return api.updateDataItem(dataItem, fs.createReadStream(file));
+    return await api.updateDataItem(dataItem, fs.createReadStream(file), await this.readMeta(file));
   }
 
-  updateObject (dataItem, file) {
-    return api.updateDataItem(dataItem, fs.createReadStream(file));
+  async updateObject (dataItem, file) {
+    return await api.updateDataItem(dataItem, fs.createReadStream(file), await this.readMeta(file));
   }
 
   deleteObject (dataItem) {
@@ -224,7 +242,7 @@ class DataItems extends DynappObjects {
 
 class DataSourceItems extends DynappObjects {
   constructor() {
-    super('data-source-items', filterMetaFiles);
+    super('data-source-items', '.py');
   }
 
   async createObject (dataSourceItem, file) {
@@ -242,7 +260,7 @@ class DataSourceItems extends DynappObjects {
 
 class DataObjects extends DynappObjects {
   constructor() {
-    super('data-objects', filterMetaFiles);
+    super('data-objects', '.py');
   }
 
   async createObject (dataObject, file) {
@@ -340,14 +358,16 @@ class Sync {
     await fs.mkdir(path.join(projectPath, 'data-objects'));
 
     let operations = [];
+    let dataItemsMeta = await unpacked.file('data-items.json').async('text');
+    dataItemsMeta = JSON.parse(dataItemsMeta);
+
     for (let fileName in unpacked.files) {
       if (!fileName.startsWith('data-items/')) {
         continue;
       }
 
       let file = unpacked.file(fileName);
-
-      operations.push(new Promise(function(resolve, reject) {
+      let dataItemFileCreation = new Promise(function(resolve, reject) {
         let localFileName = path.join(projectPath, fileName);
         mkdirp(path.dirname(localFileName), function() {
           file.nodeStream()
@@ -356,7 +376,19 @@ class Sync {
               resolve();
             });
         });
-      }));
+      }).then(function() {
+        let currentFileKey = fileName.substring('data-items/'.length);
+        let currentFileMeta = dataItemsMeta.find(m => m.name === currentFileKey);
+        let metaContent = {
+          category: currentFileMeta.category
+        };
+        if (currentFileMeta.key)
+          metaContent.key = currentFileMeta.key;
+
+        return fs.writeFile(path.join(projectPath, fileName + '.meta.json'), JSON.stringify(metaContent));
+      });
+
+      operations.push(dataItemFileCreation);
     }
 
     if ('data-objects.json' in unpacked.files) {
@@ -368,7 +400,7 @@ class Sync {
           for (let dataObject of dataObjects) {
             let code;
             if (dataObject.stylesheet) {
-              code = new Buffer(dataObject.stylesheet, 'base64').toString('utf8');
+              code = Buffer.from(dataObject.stylesheet, 'base64').toString('utf8');
             } else {
               code = '';
             }
@@ -396,7 +428,7 @@ class Sync {
           for (let dataSourceItem of dataSourceItems) {
             let code;
             if (dataSourceItem.stylesheet) {
-              code = new Buffer(dataSourceItem.stylesheet, 'base64').toString('utf8');
+              code = Buffer.from(dataSourceItem.stylesheet, 'base64').toString('utf8');
             }
             else {
               code = '';
