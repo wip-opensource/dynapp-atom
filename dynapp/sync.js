@@ -100,7 +100,7 @@ class DynappObjects {
     for (let obj of deletedObjects) {
       operations.push(this.deleteObject(obj).catch(err => {
         // File has been removed by other means, everything is good
-        if (err instanceof StatusCodeError && err.statusCode === 404)
+        if (err.statusCode && err.statusCode === 404)
           return err.message;
         else
           throw err;
@@ -159,7 +159,13 @@ class DynappObjects {
 
   async readMeta (file) {
     let metaFilePath = file + '.meta.json';
-    let metaRaw = await fs.readFile(metaFilePath, 'utf8');
+    let metaRaw = '{}'
+    try {
+      let metaRaw = await fs.readFile(metaFilePath, 'utf8');
+    } catch (err) {
+      if (err.code !== 'ENOENT')
+        throw err;
+    }
     return JSON.parse(metaRaw);
   }
 
