@@ -14,8 +14,12 @@
               "command": "dynapp-atom:createConfig"
             },
             {
-              "label": "Create ignorefile",
-              "command": "dynapp-atom:createIgnore"
+              "label": "Create .hgignore",
+              "command": "dynapp-atom:createHgIgnore"
+            },
+            {
+              "label": "Create .gitignore",
+              "command": "dynapp-atom:createGitIgnore"
             },
             {
               "label": "Download project",
