@@ -83,7 +83,7 @@ class DynappObjects {
   }
 
   _objectsPath () {
-    return path.join(config.projectPath(), this.folder);
+    return path.join(config.workPath(), this.folder);
   }
 
   async upload () {
@@ -290,7 +290,7 @@ class Sync {
   }
 
   getStateFilePath () {
-    return config.projectFilePath('.dynapp-state');
+    return config.workFilePath('.dynapp-state');
   }
 
   async state () {
@@ -352,16 +352,16 @@ class Sync {
     // Can we stream it somehow?
     const appZip = await api.downloadApp();
     const unpacked = await JSZip.loadAsync(appZip);
-    const projectPath = config.projectPath();
+    const workpath = config.workPath();
 
     // TODO: Do in parallel? Probably overkill though
-    await rmdir(path.join(projectPath, 'data-items'));
-    await rmdir(path.join(projectPath, 'data-source-items'));
-    await rmdir(path.join(projectPath, 'data-objects'));
+    await rmdir(path.join(workpath, 'data-items'));
+    await rmdir(path.join(workpath, 'data-source-items'));
+    await rmdir(path.join(workpath, 'data-objects'));
     // TODO: Do in parallel? Probably overkill though
-    await fs.mkdir(path.join(projectPath, 'data-items'));
-    await fs.mkdir(path.join(projectPath, 'data-source-items'));
-    await fs.mkdir(path.join(projectPath, 'data-objects'));
+    await fs.mkdir(path.join(workpath, 'data-items'));
+    await fs.mkdir(path.join(workpath, 'data-source-items'));
+    await fs.mkdir(path.join(workpath, 'data-objects'));
 
     let operations = [];
     let dataItemsMeta = await unpacked.file('data-items.json').async('text');
@@ -374,7 +374,7 @@ class Sync {
 
       let file = unpacked.file(fileName);
       let dataItemFileCreation = new Promise(function(resolve, reject) {
-        let localFileName = path.join(projectPath, fileName);
+        let localFileName = path.join(workpath, fileName);
         mkdirp(path.dirname(localFileName), function() {
           file.nodeStream()
             .pipe(fs.createWriteStream(localFileName))
@@ -391,7 +391,7 @@ class Sync {
         if (currentFileMeta.key)
           metaContent.key = currentFileMeta.key;
 
-        return fs.writeFile(path.join(projectPath, fileName + '.meta.json'), JSON.stringify(metaContent));
+        return fs.writeFile(path.join(workpath, fileName + '.meta.json'), JSON.stringify(metaContent));
       });
 
       operations.push(dataItemFileCreation);
@@ -413,8 +413,8 @@ class Sync {
             dataObject.stylesheet = '<See corresponding .py file>';
             let pyName = dataObject.name + '.py';
             let metaName = dataObject.name + '.meta.json';
-            let pyOperation = fs.writeFile(path.join(projectPath, 'data-objects', pyName), code);
-            let metaOperation = fs.writeFile(path.join(projectPath, 'data-objects', metaName), json_stringify_readable(dataObject));
+            let pyOperation = fs.writeFile(path.join(workpath, 'data-objects', pyName), code);
+            let metaOperation = fs.writeFile(path.join(workpath, 'data-objects', metaName), json_stringify_readable(dataObject));
 
             dataObjectOperations.push(pyOperation, metaOperation);
           }
@@ -443,8 +443,8 @@ class Sync {
             let pyName = dataSourceItem.name + '.py';
             let metaName = dataSourceItem.name + '.meta.json';
 
-            let pyOperation = fs.writeFile(path.join(projectPath, 'data-source-items', pyName), code);
-            let metaOperation = fs.writeFile(path.join(projectPath, 'data-source-items', metaName), json_stringify_readable(dataSourceItem));
+            let pyOperation = fs.writeFile(path.join(workpath, 'data-source-items', pyName), code);
+            let metaOperation = fs.writeFile(path.join(workpath, 'data-source-items', metaName), json_stringify_readable(dataSourceItem));
 
             dataSourceItemOperations.push(pyOperation, metaOperation);
           }

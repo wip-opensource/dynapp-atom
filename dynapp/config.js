@@ -16,12 +16,29 @@ function projectFilePath (relativePath) {
   return path.join(projectPath(), relativePath);
 }
 
+function workPath () {
+  let wPath = config().workpath || '';
+  return path.join(projectPath(), wPath);
+}
+
+function workFilePath (relativePath) {
+  return path.join(workPath(), relativePath);
+}
+
+function config () {
+  try {
+    let content = fs.readFileSync(projectFilePath('dynappconfig.json'), 'utf8');
+    return JSON.parse(content);
+  } catch(ex) {
+    console.log('Could not find dynappconfig.json');
+    return {};
+  }
+}
+
 module.exports = {
   projectPath,
   projectFilePath,
-  // TODO: Need a better interface to this
-  config () {
-    let content = fs.readFileSync(path.join(projectPath(), 'dynappconfig.json'), 'utf8');
-    return JSON.parse(content);
-  }
+  workPath,
+  workFilePath,
+  config
 }
