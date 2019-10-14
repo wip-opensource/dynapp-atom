@@ -62,6 +62,8 @@ function headerifyDataItemMeta (meta) {
     headers['X-Key'] = meta.key;
   if (meta.category != null)
     headers['X-Category'] = meta.category;
+  if (meta.contentType != null)
+    headers['Content-Type'] = meta.contentType;
   return headers;
 }
 

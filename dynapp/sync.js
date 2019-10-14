@@ -388,6 +388,8 @@ class Sync {
         let metaContent = {
           category: currentFileMeta.category
         };
+        if (currentFileMeta.contentType)
+          metaContent.contentType = currentFileMeta.contentType;
         if (currentFileMeta.key)
           metaContent.key = currentFileMeta.key;
 
