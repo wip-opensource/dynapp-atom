@@ -161,7 +161,7 @@ class DynappObjects {
     let metaFilePath = file + '.meta.json';
     let metaRaw = '{}'
     try {
-      let metaRaw = await fs.readFile(metaFilePath, 'utf8');
+      metaRaw = await fs.readFile(metaFilePath, 'utf8');
     } catch (err) {
       if (err.code !== 'ENOENT')
         throw err;
