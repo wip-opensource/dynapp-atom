@@ -351,21 +351,26 @@ class Sync {
     // TODO: Now we load all of the zip into memory.
     // Can we stream it somehow?
     const appZip = await api.downloadApp();
+    console.log('Zip downloaded');
     const unpacked = await JSZip.loadAsync(appZip);
+    console.log('Zip unpacked');
     const workpath = config.workPath();
 
     // TODO: Do in parallel? Probably overkill though
     await rmdir(path.join(workpath, 'data-items'));
     await rmdir(path.join(workpath, 'data-source-items'));
     await rmdir(path.join(workpath, 'data-objects'));
+    console.log('Removed folders');
     // TODO: Do in parallel? Probably overkill though
     await fs.mkdir(path.join(workpath, 'data-items'));
     await fs.mkdir(path.join(workpath, 'data-source-items'));
     await fs.mkdir(path.join(workpath, 'data-objects'));
+    console.log('Created folders');
 
     let operations = [];
     let dataItemsMeta = await unpacked.file('data-items.json').async('text');
     dataItemsMeta = JSON.parse(dataItemsMeta);
+    console.log('Parsed data items meta');
 
     for (let fileName in unpacked.files) {
       if (!fileName.startsWith('data-items/')) {
@@ -398,6 +403,7 @@ class Sync {
 
       operations.push(dataItemFileCreation);
     }
+    console.log('Data-items write initiated');
 
     if ('data-objects.json' in unpacked.files) {
       operations.push(new Promise(function(resolve, reject) {
@@ -424,6 +430,7 @@ class Sync {
           Promise.all(dataObjectOperations).then(resolve);
         });
       }));
+      console.log('Data-objects write initiated');
     }
 
     // TODO: Duplicated code form data-objects
@@ -454,10 +461,13 @@ class Sync {
           Promise.all(dataSourceItemOperations).then(resolve);
         });
       }));
+      console.log('Data-sources write initiated');
     }
 
     await Promise.all(operations);
+    console.log('All items written');
     await this.dumpState();
+    console.log('State saved');
   }
 }
 
