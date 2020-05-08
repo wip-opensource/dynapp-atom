@@ -11,3 +11,15 @@
 * You can now locally edit the files.
 * To publish your changes, go to `packages` -> `dynapp-atom` -> `publish`. (or press ctrl + alt + u)
 * You can also create new files from `packages` -> `dynapp-atom`
+
+
+## dynappconfig.json
+
+* **username** - The username and group separated with slash to use for requests againts DynApp.
+* **password** - The password for the given user.
+* **group** - The group name of the app to work against.
+* **app** - The app id of the app to work against.
+* **baseurl** - The base url of the DynApp server.
+* **workpath** - Path to where the app files are saved relative to the config file.
+* **rungroup** - For use with DynApp Webcomponents. Overrides the value of group when running a web with proxy locally.
+* **runapp** - For use with DynApp Webcomponents. Overrides the value of app when running a web with proxy locally.
