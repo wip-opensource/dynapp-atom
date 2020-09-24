@@ -35,10 +35,32 @@ function config () {
   }
 }
 
+async function create() {
+  let dynappConfig = {
+    'username': '<username>/<devgroups>',
+    'password': '<password>',
+    'group': '<projectGroup>',
+    'app': '<appname>',
+    'baseUrl': 'https://dynappbeta.wip.se/',
+    'workpath': '',
+    'rungroup': '',
+    'runapp': ''
+  };
+  let configFile = path.join(projectPath(), 'dynappconfig.json');
+  let configFileExists = await fs.exists(configFile);
+  if (!configFileExists) {
+    console.log('Config file created');
+    await fs.writeFile(configFile, JSON.stringify(dynappConfig, null, 4));
+  } else {
+    console.log('Config file already exists');
+  }
+}
+
 module.exports = {
   projectPath,
   projectFilePath,
   workPath,
   workFilePath,
-  config
+  config,
+  create
 }

@@ -12,7 +12,6 @@ function json_stringify_readable(content) {
 
 // Remove dir with files recursively
 const rmdir = async function(dir) {
-    // TODO: Handle file operations concurrently, but probably is overkill.
     let files = await fs.readdir(dir);
 
     for (let i = 0; i < files.length; i++) {
@@ -76,8 +75,8 @@ function filterMetaFiles(fileName) {
 class DynappObjects {
   constructor(folder, fileExt, filter) {
     this.folder = folder;
-    // TODO: This is not good, dirt hacky workaround.
-    // Should just use a single meta-file per type (data-items, data-source-items, data-objects)
+    // TODO: Use a single meta-file per type (data-items, data-source-items, data-objects)
+    //       Would remove need to check file extension and have filter
     this.fileExt = fileExt || '';
     this.filter = filter || (() => true);
   }
@@ -128,6 +127,7 @@ class DynappObjects {
     // TODO: Reuse list from dirty() and hashes() ?
     let localFiles = await listFiles(objectsPath, this.filter);
 
+    // TODO: Do in batches to not exceed open file limit
     for (let i = 0; i < localFiles.length; i++) {
       let fileName = localFiles[i];
       let operation = md5File(path.join(objectsPath, fileName)).then(function(hash) {
@@ -199,6 +199,7 @@ class DynappObjects {
 
     for (let file of localFiles) {
       if (file in this._hashes) {
+        // Check both normal and meta-files for changes
         let operation = md5File(path.join(objectsPath, file)).then((hash) => {
           return this._hashes[file].hash !== hash ? file : null;
         });
@@ -209,7 +210,8 @@ class DynappObjects {
     }
 
     for (let fileName in this._hashes) {
-      if (localFiles.indexOf(fileName) === -1) {
+      // No need to try to delete meta files
+      if (!fileName.endsWith('.meta.json') && localFiles.indexOf(fileName) === -1) {
         deletedObjects.push(fileName);
       }
     }
@@ -260,7 +262,7 @@ class DataSourceItems extends DynappObjects {
   }
 
   deleteObject (dataSourceItem) {
-    return api.deleteDataSourceItem(dataSourceItem);
+    return api.deleteDataSourceItem(dataSourceItem.substring(0, dataSourceItem.lastIndexOf('.py')));
   }
 }
 
@@ -278,7 +280,7 @@ class DataObjects extends DynappObjects {
   }
 
   deleteObject (dataObject) {
-    return api.deleteDataObject(dataObject);
+    return api.deleteDataObject(dataObject.substring(0, dataObject.lastIndexOf('.py')));
   }
 }
 
@@ -356,12 +358,11 @@ class Sync {
     console.log('Zip unpacked');
     const workpath = config.workPath();
 
-    // TODO: Do in parallel? Probably overkill though
     await rmdir(path.join(workpath, 'data-items'));
     await rmdir(path.join(workpath, 'data-source-items'));
     await rmdir(path.join(workpath, 'data-objects'));
     console.log('Removed folders');
-    // TODO: Do in parallel? Probably overkill though
+
     await fs.mkdir(path.join(workpath, 'data-items'));
     await fs.mkdir(path.join(workpath, 'data-source-items'));
     await fs.mkdir(path.join(workpath, 'data-objects'));
@@ -471,7 +472,6 @@ class Sync {
   }
 }
 
-// TODO: Defer instantiation to the caller instead.
 module.exports = {
   Sync: Sync
 }
