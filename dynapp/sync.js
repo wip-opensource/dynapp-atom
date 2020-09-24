@@ -127,22 +127,26 @@ class DynappObjects {
     // TODO: Reuse list from dirty() and hashes() ?
     let localFiles = await listFiles(objectsPath, this.filter);
 
-    // TODO: Do in batches to not exceed open file limit
-    for (let i = 0; i < localFiles.length; i++) {
-      let fileName = localFiles[i];
-      let operation = md5File(path.join(objectsPath, fileName)).then(function(hash) {
-        return {
-          name: fileName,
-          hash: hash
-        };
-      });
-
-      operations.push(operation);
+    // Do in batches to not exceed open file limit
+    var batchSize = 100;
+    var batchCount = Math.ceil(localFiles.length / batchSize);
+    var files = [];
+    for (let b = 0; b < batchCount; b++) {
+      let batchFiles = localFiles.slice(b*batchSize, (b+1)*batchSize);
+      for (let i = 0; i < batchFiles.length; i++) {
+        let fileName = batchFiles[i];
+        let operation = md5File(path.join(objectsPath, fileName)).then(function(hash) {
+          return {
+            name: fileName,
+            hash: hash
+          };
+        });
+        operations.push(operation);
+      }
+      files = files.concat(await Promise.all(operations));
     }
 
-    let files = await Promise.all(operations);
     let result = {};
-
     for (let i = 0; i < files.length; i++) {
       let file = files[i];
       result[file.name] = {
