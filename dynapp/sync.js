@@ -373,9 +373,12 @@ class Sync {
     console.log('Created folders');
 
     let operations = [];
-    let dataItemsMeta = await unpacked.file('data-items.json').async('text');
-    dataItemsMeta = JSON.parse(dataItemsMeta);
-    console.log('Parsed data items meta');
+    let dataItemsMeta = [];
+    if ('data-items.json' in unpacked.files) {
+      dataItemsMeta = await unpacked.file('data-items.json').async('text');
+      dataItemsMeta = JSON.parse(dataItemsMeta);
+      console.log('Parsed data items meta');
+    }
 
     for (let fileName in unpacked.files) {
       if (!fileName.startsWith('data-items/')) {
