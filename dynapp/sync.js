@@ -1,6 +1,6 @@
 const config = require('./config');
 const api = require('./api');
-const md5File = require('md5-file/promise');
+const md5File = require('md5-file');
 const fs = require('fs-extra');
 const path = require('path');
 const mkdirp = require('mkdirp');
@@ -403,7 +403,7 @@ class Sync {
       let file = unpacked.file(fileName);
       let dataItemFileCreation = new Promise(function(resolve, reject) {
         let localFileName = path.join(workpath, fileName);
-        mkdirp(path.dirname(localFileName), function() {
+        mkdirp(path.dirname(localFileName)).then(function () {
           file.nodeStream()
             .pipe(fs.createWriteStream(localFileName))
             .on('finish', function() {

@@ -1,11 +1,8 @@
-const request = require('request-promise-native');
+const fetch = require('node-fetch');
+const {Base64} = require('js-base64');
 const config = require('./config');
 const urljoin = require('url-join');
 const mime = require('mime-types');
-
-const _headers = {
-  'User-Agent': 'dynapp-atom'
-};
 
 function auth() {
   // TODO: Better interface to config
@@ -13,7 +10,33 @@ function auth() {
   return {
     user: _auth.username,
     pass: _auth.password
-  }
+  };
+}
+
+function authHeader() {
+  var _auth = auth();
+  return 'Basic ' + Base64.encode(_auth.user+':'+_auth.pass);
+}
+
+function _headers(headers) {
+  return Object.assign({
+    'User-Agent': 'dynapp-atom',
+    'Authorization': authHeader()
+  }, headers);
+}
+
+function getResponseData(resp) {
+  return new Promise(function(resolve, reject) {
+    var data = [];
+
+    resp.body.on("data", function (chunk) {
+      data.push(chunk);
+    });
+    resp.body.on("end", function () {
+      var buf = Buffer.concat(data);
+      resolve(buf);
+    });
+  });
 }
 
 function baseUrl() {
@@ -35,25 +58,21 @@ function baseUrlDataObjects() {
 }
 
 function _modifyEntity(url, body, method, contentType, headers) {
-  return request({
-    url: url,
+  return fetch(url, {
     method: method,
-    headers: Object.assign({
+    headers: Object.assign(_headers(headers), {
       'Content-Type': contentType || mime.lookup(url) || '',
       'X-Category': '2'
-    }, _headers, headers),
+    }),
     body: body,
-    auth: auth()
-  });
+  }).then(getResponseData);
 }
 
 function _deleteEntity(url) {
-  return request({
-    url: url,
+  return fetch(url, {
     method: 'DELETE',
-    headers: _headers,
-    auth: auth()
-  });
+    headers: _headers()
+  }).then(getResponseData);
 }
 
 function headerifyDataItemMeta (meta) {
@@ -113,14 +132,11 @@ function deleteDataObject(dataObject) {
 }
 
 function downloadApp() {
-  return request({
-    url: baseUrl(),
-    headers: Object.assign({
+  return fetch(baseUrl(), {
+    headers: _headers({
       'Accept': 'application/zip'
-    }, _headers),
-    encoding: null,
-    auth: auth()
-  });
+    })
+  }).then(getResponseData);
 }
 
 module.exports = {
