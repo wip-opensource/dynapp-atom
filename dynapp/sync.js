@@ -98,7 +98,7 @@ class DynappObjects {
       logString += changedObjects.length+' changed';
     }
     if (deletedObjects.length > 0) {
-      logString += deletedObjects.length+' del';
+      logString += deletedObjects.length+' deleted';
     }
     if (newObjects.length + changedObjects.length + deletedObjects.length == 0) {
       logString += 'No changes';
