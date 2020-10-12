@@ -60,10 +60,14 @@ function baseUrlDataObjects() {
 function _modifyEntity(url, body, method, contentType, headers) {
   return fetch(url, {
     method: method,
-    headers: Object.assign(_headers(headers), {
-      'Content-Type': contentType || mime.lookup(url) || '',
-      'X-Category': '2'
-    }),
+    headers: Object.assign(
+      _headers(),
+      {
+        'Content-Type': contentType || mime.lookup(url) || '',
+        'X-Category': '2'
+      },
+      headers
+    ),
     body: body,
   }).then(getResponseData);
 }
