@@ -366,7 +366,7 @@ class Sync {
     await this.dumpState();
   }
 
-  async download () {
+  async download (rootFolderElem) {
     // TODO: Break into parts and put in respective class
 
     // TODO: Now we load all of the zip into memory.
@@ -376,6 +376,15 @@ class Sync {
     const unpacked = await JSZip.loadAsync(appZip);
     console.log('Zip unpacked');
     const workpath = config.workPath();
+
+    var rootFolderCollapsed = false;
+    if (rootFolderElem && rootFolderElem.classList.contains('expanded')) {
+      // Collapse root folder to make download faster
+      // (It takes time to remove/add files when atom needs to update
+      // the tree view for each file)
+      rootFolderElem.click();
+      rootFolderCollapsed = true;
+    }
 
     await rmdir(path.join(workpath, 'data-items'));
     await rmdir(path.join(workpath, 'data-source-items'));
@@ -491,6 +500,14 @@ class Sync {
     console.log('All items written');
     await this.dumpState();
     console.log('State saved');
+
+    if (rootFolderElem) {
+      if (!rootFolderCollapsed) {
+        // Emulate two clicks on root folder to force it to update
+        rootFolderElem.click();
+      }
+      rootFolderElem.click();
+    }
   }
 }
 
