@@ -9,6 +9,9 @@
   "engines": {
     "atom": ">=1.0.0 <2.0.0"
   },
+  "activationHooks": [
+    "core:loaded-shell-environment"
+  ],
   "dependencies": {
     "fs-extra": "^9.0.1",
     "jszip": "^3.5.0",
