@@ -20,7 +20,7 @@
     "mkdirp": "^1.0.4",
     "path": "^0.12.7",
     "url-join": "^4.0.1",
-    "node-fetch": "^2.6.1",
+    "node-fetch": "^2.6.7",
     "js-base64": "^3.5.2"
   },
   "consumedServices": {
